@@ -1,4 +1,4 @@
-// Timestamp: 2026-06-18 11:31:36 -04:00
+// Timestamp: 2026-06-18 13:55:14 -04:00
 // js/app.js
 
 import {
@@ -452,6 +452,43 @@ function getRepairTitleSummary(item) {
   return raw.split('|')[0].trim() || raw;
 }
 
+function formatRepairDateValue(raw) {
+  if (!raw) return '';
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim();
+    const exact = trimmed.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (exact) return exact[1];
+  }
+
+  const d = new Date(raw);
+  if (Number.isNaN(d.getTime())) return '';
+
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function getRepairSecteurLabel(item) {
+  return (
+    item?.secteur_label ??
+    item?.secteurLabel ??
+    ''
+  ).toString().trim();
+}
+
+function getRepairDemandeurLabel(item) {
+  return (
+    item?.demandeur_nom ??
+    item?.demandeurNom ??
+    ''
+  ).toString().trim();
+}
+
+function getRepairCloseDateLabel(item) {
+  return formatRepairDateValue(item?.close_date ?? item?.closeDate ?? '');
+}
+
 function getRepairCreatedAtValue(item) {
   const candidates = [
     item?.createdAt,
@@ -492,6 +529,29 @@ function formatRepairShortDate(item) {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+function getRepairAccueilDateInfo(item) {
+  const closeDate = getRepairCloseDateLabel(item);
+  if (closeDate) {
+    return {
+      label: 'Fermeture',
+      value: closeDate,
+    };
+  }
+
+  const createdDate = formatRepairShortDate(item);
+  if (createdDate && createdDate !== 'Date inconnue') {
+    return {
+      label: 'Création',
+      value: createdDate,
+    };
+  }
+
+  return {
+    label: 'Date',
+    value: 'Inconnue',
+  };
+}
+
 function isOpenRepairForAccueil(item) {
   return getRepairStateId(item) === 1;
 }
@@ -528,7 +588,11 @@ function renderAccueilListItems(items, emptyLabel) {
     const code = escapeHtml(formatAppItemCode(item) || 'Sans code');
     const title = escapeHtml(getRepairTitleSummary(item));
     const inventory = escapeHtml(getRepairInventory(item) || 'Inventaire inconnu');
-    const dateLabel = escapeHtml(formatRepairShortDate(item));
+    const secteur = escapeHtml(getRepairSecteurLabel(item) || 'Secteur inconnu');
+    const demandeur = escapeHtml(getRepairDemandeurLabel(item) || '');
+    const dateInfo = getRepairAccueilDateInfo(item);
+    const dateLabel = escapeHtml(dateInfo.value);
+    const dateCaption = escapeHtml(dateInfo.label);
     const stateId = getRepairStateId(item);
     const stateClass = escapeHtml(etatColor(stateId || 0));
     const stateLabel = escapeHtml(item?.etat_label || item?.stateLabel || etatLabel(stateId || 0));
@@ -546,8 +610,24 @@ function renderAccueilListItems(items, emptyLabel) {
           </span>
         </div>
         <div class="transit-repair-card__title">${title}</div>
+        <div class="transit-repair-card__details">
+          <div class="transit-repair-card__detail">
+            <span class="transit-repair-card__label">Inventaire</span>
+            <span>${inventory}</span>
+          </div>
+          <div class="transit-repair-card__detail">
+            <span class="transit-repair-card__label">Secteur</span>
+            <span>${secteur}</span>
+          </div>
+          ${demandeur ? `
+            <div class="transit-repair-card__detail">
+              <span class="transit-repair-card__label">Demandeur</span>
+              <span>${demandeur}</span>
+            </div>
+          ` : ''}
+        </div>
         <div class="transit-repair-card__meta">
-          <span>Inventaire ${inventory}</span>
+          <span>${dateCaption}</span>
           <span>${dateLabel}</span>
         </div>
       </button>

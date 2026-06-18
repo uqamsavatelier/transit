@@ -1,4 +1,4 @@
-/* Timestamp: 2026-06-18 11:31:36 -04:00 */
+/* Timestamp: 2026-06-18 13:55:14 -04:00 */
 
 html, body {
   height: 100%;
@@ -177,6 +177,27 @@ button {
   font-weight: 700;
   line-height: 1.35;
   color: #020617;
+}
+
+.transit-repair-card__details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.32rem;
+  margin-bottom: 0.55rem;
+  font-size: 0.83rem;
+  color: #334155;
+}
+
+.transit-repair-card__detail {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.65rem;
+}
+
+.transit-repair-card__label {
+  color: #64748b;
+  font-weight: 600;
 }
 
 .transit-repair-card__meta,
