@@ -1,4 +1,4 @@
-// Timestamp: 2026-06-18 11:31:36 -04:00
+// Timestamp: 2026-06-18 14:37:14 -04:00
 // js/api.js
 import { CONFIG } from './config.js';
 
@@ -72,6 +72,23 @@ export async function apiListRepairsCache(limit = 100) {
   }
 
   return Array.isArray(data.items) ? data.items : [];
+}
+
+export async function apiFetchOverviewHome(limit = 5) {
+  const wantedLimit = Number(limit);
+  const qs = Number.isFinite(wantedLimit) && wantedLimit > 0
+    ? `?limit=${encodeURIComponent(String(Math.floor(wantedLimit)))}`
+    : '';
+
+  const data = await api(`/repairs/overview/home${qs}`, { method: 'GET' });
+  if (!data || data.ok === false) {
+    throw new Error(data?.error || 'Erreur inconnue dans apiFetchOverviewHome');
+  }
+
+  return {
+    open: Array.isArray(data.open) ? data.open : [],
+    done: Array.isArray(data.done) ? data.done : [],
+  };
 }
 
 // Recherche d'un BT par ID unique ou code (ex. "REP1437", "rep1437", "1437")

@@ -1,4 +1,4 @@
-// Timestamp: 2026-06-18 13:55:14 -04:00
+// Timestamp: 2026-06-18 14:37:14 -04:00
 // js/app.js
 
 import {
@@ -26,6 +26,7 @@ import {
   refreshLastCreated,
   refreshLastCreatedFromPodio,
   refreshLastCreatedByInventory,
+  apiFetchOverviewHome,
   apiListRepairsCache,
   apiListMesBT,
   apiGetBTById,
@@ -2846,9 +2847,28 @@ function scheduleRefreshDernierBon(delayMs) {
 
 async function loadLastFromRepairsListAndMaybeWarn() {
   try {
-    const rawItems = await apiListRepairsCache(200);
-    homeRepairsSummary = buildHomeRepairsSummary(rawItems);
-    lastRepairsList = homeRepairsSummary.all.slice();
+    const [rawItems, overview] = await Promise.all([
+      apiListRepairsCache(200),
+      apiFetchOverviewHome(5),
+    ]);
+
+    lastRepairsList = rawItems.map(mergeRepairCacheItem);
+
+    const combinedOverviewItems = [...(overview.open || []), ...(overview.done || [])];
+    const byRef = new Map();
+    combinedOverviewItems.forEach((item) => {
+      const ref = getRepairReferenceId(item);
+      if (ref) {
+        byRef.set(ref, item);
+      }
+    });
+
+    homeRepairsSummary = {
+      all: Array.from(byRef.values()),
+      open: Array.isArray(overview.open) ? overview.open : [],
+      done: Array.isArray(overview.done) ? overview.done : [],
+      error: '',
+    };
 
     if (!lastRepairsList.length) {
       if (app.dataset.screen === 'accueil') {
