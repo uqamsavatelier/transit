@@ -1,4 +1,4 @@
-/* Timestamp: 2026-06-18 14:49:18 -04:00 */
+/* Timestamp: 2026-06-18 14:54:59 -04:00 */
 
 html, body {
   height: 100%;
@@ -117,7 +117,6 @@ button {
   color: #0f172a;
 }
 
-.transit-side-panel__count,
 .transit-list-hero__badge {
   flex: 0 0 auto;
   min-width: 3rem;
@@ -256,18 +255,11 @@ button {
   color: #020617;
 }
 
-.transit-scan-panel__subtitle {
-  max-width: 40rem;
-  margin: 0.9rem auto 0;
-  color: #475569;
-  font-size: 1rem;
-}
-
 .transit-scan-panel__logo-wrap {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 1.25rem 0 1.5rem;
+  margin: 1rem 0 1.35rem;
 }
 
 .transit-scan-panel__logo {

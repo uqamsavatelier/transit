@@ -1,4 +1,4 @@
-// Timestamp: 2026-06-18 14:49:18 -04:00
+// Timestamp: 2026-06-18 14:54:59 -04:00
 // js/app.js
 
 import {
@@ -605,11 +605,11 @@ function renderAccueilListItems(items, emptyLabel) {
 }
 
 function renderAccueilColumn(title, accentClass, items, emptyLabel, actionLabel, actionKey, totalCount = items.length) {
+  const titleWithCount = `${title} (${totalCount})`;
   return `
     <section class="transit-side-panel">
       <div class="transit-side-panel__header">
-        <h3 class="transit-side-panel__title ${accentClass}">${escapeHtml(title)}</h3>
-        <div class="transit-side-panel__count">${totalCount}</div>
+        <h3 class="transit-side-panel__title ${accentClass}">${escapeHtml(titleWithCount)}</h3>
       </div>
 
       <div class="transit-side-panel__body">
@@ -760,11 +760,7 @@ function screenAccueil() {
         <section class="transit-home-column transit-home-column--center">
           <div class="transit-scan-panel">
             <div class="transit-scan-panel__header">
-              <p class="transit-scan-panel__eyebrow">Transit - réception des réparations</p>
               <h2 class="transit-scan-panel__title">Numérisez le code d'inventaire</h2>
-              <p class="transit-scan-panel__subtitle">
-                Le kiosque est prêt à ouvrir une fiche existante ou démarrer un nouveau dossier.
-              </p>
             </div>
 
             ${CONFIG.LOGO_URL ? `
