@@ -1,4 +1,4 @@
-// Timestamp: 2026-06-18 14:37:14 -04:00
+// Timestamp: 2026-06-18 14:59:06 -04:00
 // js/api.js
 import { CONFIG } from './config.js';
 
@@ -86,6 +86,8 @@ export async function apiFetchOverviewHome(limit = 5) {
   }
 
   return {
+    openTotal: Number(data.openTotal) || 0,
+    doneTotal: Number(data.doneTotal) || 0,
     open: Array.isArray(data.open) ? data.open : [],
     done: Array.isArray(data.done) ? data.done : [],
   };

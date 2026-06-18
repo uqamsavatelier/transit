@@ -1,4 +1,4 @@
-// Timestamp: 2026-06-18 14:54:59 -04:00
+// Timestamp: 2026-06-18 14:59:06 -04:00
 // js/app.js
 
 import {
@@ -306,6 +306,8 @@ let homeRepairsSummary = {
   all: [],
   open: [],
   done: [],
+  openTotal: 0,
+  doneTotal: 0,
   error: '',
 };
 
@@ -732,8 +734,8 @@ function screenAccueil() {
   isManualMode = false;
 
   const idManualBtn = 'manual_' + Math.random().toString(36).slice(2);
-  const openTotal = homeRepairsSummary.all.filter(isOpenRepairForAccueil).length;
-  const doneTotal = homeRepairsSummary.all.filter(isDoneRepairForAccueil).length;
+  const openTotal = Number(homeRepairsSummary.openTotal) || 0;
+  const doneTotal = Number(homeRepairsSummary.doneTotal) || 0;
   const overviewError = homeRepairsSummary.error
     ? `<div class="transit-home-banner">${escapeHtml(homeRepairsSummary.error)}</div>`
     : '';
@@ -2828,6 +2830,8 @@ async function loadLastFromRepairsListAndMaybeWarn() {
       all: Array.from(byRef.values()),
       open: Array.isArray(overview.open) ? overview.open : [],
       done: Array.isArray(overview.done) ? overview.done : [],
+      openTotal: Number(overview.openTotal) || 0,
+      doneTotal: Number(overview.doneTotal) || 0,
       error: '',
     };
 
@@ -2857,6 +2861,8 @@ async function loadLastFromRepairsListAndMaybeWarn() {
     console.error('loadLastFromRepairsListAndMaybeWarn error', e);
     homeRepairsSummary = {
       ...homeRepairsSummary,
+      openTotal: homeRepairsSummary.openTotal || 0,
+      doneTotal: homeRepairsSummary.doneTotal || 0,
       error: "Impossible de charger les dossiers récents pour l'accueil.",
     };
 
