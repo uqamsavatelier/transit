@@ -1,4 +1,4 @@
-// Timestamp: 2026-06-18 14:37:14 -04:00
+// Timestamp: 2026-06-18 14:49:18 -04:00
 // js/app.js
 
 import {
@@ -486,10 +486,6 @@ function getRepairDemandeurLabel(item) {
   ).toString().trim();
 }
 
-function getRepairCloseDateLabel(item) {
-  return formatRepairDateValue(item?.close_date ?? item?.closeDate ?? '');
-}
-
 function getRepairCreatedAtValue(item) {
   const candidates = [
     item?.createdAt,
@@ -530,27 +526,24 @@ function formatRepairShortDate(item) {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-function getRepairAccueilDateInfo(item) {
-  const closeDate = getRepairCloseDateLabel(item);
-  if (closeDate) {
-    return {
-      label: 'Fermeture',
-      value: closeDate,
-    };
+function getRepairAccueilAudienceLabel(item) {
+  const secteurIdRaw = item?.secteur ?? item?.secteurId ?? null;
+  const secteurId = secteurIdRaw != null ? Number(secteurIdRaw) : NaN;
+  const secteurLabel = getRepairSecteurLabel(item);
+  const demandeur = getRepairDemandeurLabel(item);
+  const isAutre =
+    secteurId === ID_AUTRE ||
+    /autre membre/i.test(secteurLabel);
+
+  if (isAutre && demandeur) {
+    return demandeur;
   }
 
-  const createdDate = formatRepairShortDate(item);
-  if (createdDate && createdDate !== 'Date inconnue') {
-    return {
-      label: 'Création',
-      value: createdDate,
-    };
+  if (secteurLabel) {
+    return secteurLabel;
   }
 
-  return {
-    label: 'Date',
-    value: 'Inconnue',
-  };
+  return demandeur || 'Information indisponible';
 }
 
 function isOpenRepairForAccueil(item) {
@@ -588,15 +581,8 @@ function renderAccueilListItems(items, emptyLabel) {
     const ref = escapeHtml(getRepairReferenceId(item));
     const code = escapeHtml(formatAppItemCode(item) || 'Sans code');
     const title = escapeHtml(getRepairTitleSummary(item));
-    const inventory = escapeHtml(getRepairInventory(item) || 'Inventaire inconnu');
-    const secteur = escapeHtml(getRepairSecteurLabel(item) || 'Secteur inconnu');
-    const demandeur = escapeHtml(getRepairDemandeurLabel(item) || '');
-    const dateInfo = getRepairAccueilDateInfo(item);
-    const dateLabel = escapeHtml(dateInfo.value);
-    const dateCaption = escapeHtml(dateInfo.label);
-    const stateId = getRepairStateId(item);
-    const stateClass = escapeHtml(etatColor(stateId || 0));
-    const stateLabel = escapeHtml(item?.etat_label || item?.stateLabel || etatLabel(stateId || 0));
+    const audience = escapeHtml(getRepairAccueilAudienceLabel(item));
+    const createdDate = escapeHtml(formatRepairShortDate(item));
 
     return `
       <button
@@ -606,30 +592,12 @@ function renderAccueilListItems(items, emptyLabel) {
       >
         <div class="transit-repair-card__topline">
           <span class="transit-repair-card__code">${code}</span>
-          <span class="inline-block px-2 py-1 rounded-full text-xs font-semibold text-black ${stateClass}">
-            ${stateLabel}
-          </span>
         </div>
         <div class="transit-repair-card__title">${title}</div>
-        <div class="transit-repair-card__details">
-          <div class="transit-repair-card__detail">
-            <span class="transit-repair-card__label">Inventaire</span>
-            <span>${inventory}</span>
-          </div>
-          <div class="transit-repair-card__detail">
-            <span class="transit-repair-card__label">Secteur</span>
-            <span>${secteur}</span>
-          </div>
-          ${demandeur ? `
-            <div class="transit-repair-card__detail">
-              <span class="transit-repair-card__label">Demandeur</span>
-              <span>${demandeur}</span>
-            </div>
-          ` : ''}
-        </div>
+        <div class="transit-repair-card__context">${audience}</div>
         <div class="transit-repair-card__meta">
-          <span>${dateCaption}</span>
-          <span>${dateLabel}</span>
+          <span>Date de création</span>
+          <span>${createdDate}</span>
         </div>
       </button>
     `;
@@ -640,10 +608,7 @@ function renderAccueilColumn(title, accentClass, items, emptyLabel, actionLabel,
   return `
     <section class="transit-side-panel">
       <div class="transit-side-panel__header">
-        <div>
-          <p class="transit-side-panel__eyebrow ${accentClass}">${escapeHtml(title)}</p>
-          <h3 class="transit-side-panel__title">${escapeHtml(title)}</h3>
-        </div>
+        <h3 class="transit-side-panel__title ${accentClass}">${escapeHtml(title)}</h3>
         <div class="transit-side-panel__count">${totalCount}</div>
       </div>
 
