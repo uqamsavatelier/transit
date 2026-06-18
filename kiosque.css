@@ -1,3 +1,5 @@
+/* Timestamp: 2026-06-18 11:31:36 -04:00 */
+
 html, body {
   height: 100%;
 }
@@ -16,9 +18,320 @@ button {
 
 @keyframes scan-blink {
   0%, 100% { opacity: 0.2; }
-  50%      { opacity: 1;   }
+  50% { opacity: 1; }
 }
 
 .animate-scan-line {
   animation: scan-blink 1s infinite;
+}
+
+.transit-home-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.transit-home-banner {
+  border: 1px solid rgba(127, 29, 29, 0.12);
+  background: linear-gradient(135deg, rgba(255, 248, 240, 0.95), rgba(255, 235, 230, 0.95));
+  color: #7f1d1d;
+  border-radius: 1.25rem;
+  padding: 0.9rem 1rem;
+  box-shadow: 0 18px 40px rgba(127, 29, 29, 0.08);
+}
+
+.transit-home-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.transit-home-column {
+  min-width: 0;
+}
+
+.transit-home-column--center {
+  order: 1;
+}
+
+.transit-home-column--left {
+  order: 2;
+}
+
+.transit-home-column--right {
+  order: 3;
+}
+
+.transit-side-panel,
+.transit-scan-panel,
+.transit-list-shell {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 1.75rem;
+  background:
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.96), rgba(250, 250, 248, 0.94)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(245, 245, 244, 0.96));
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(8px);
+}
+
+.transit-side-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  padding: 1.1rem;
+}
+
+.transit-side-panel__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.transit-side-panel__eyebrow,
+.transit-list-hero__eyebrow,
+.transit-scan-panel__eyebrow {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.transit-side-panel__eyebrow--open {
+  color: #9f1239;
+}
+
+.transit-side-panel__eyebrow--done {
+  color: #0f766e;
+}
+
+.transit-side-panel__title {
+  margin: 0.3rem 0 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #0f172a;
+}
+
+.transit-side-panel__count,
+.transit-list-hero__badge {
+  flex: 0 0 auto;
+  min-width: 3rem;
+  height: 3rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: #111827;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.transit-side-panel__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  flex: 1 1 auto;
+}
+
+.transit-repair-card {
+  width: 100%;
+  border: 1px solid rgba(15, 23, 42, 0.09);
+  border-radius: 1.25rem;
+  padding: 0.9rem;
+  text-align: left;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.92));
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.transit-repair-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(15, 23, 42, 0.18);
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.1);
+}
+
+.transit-repair-card__topline,
+.transit-repair-card__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.transit-repair-card__code {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #475569;
+}
+
+.transit-repair-card__title {
+  margin: 0.6rem 0 0.55rem;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.35;
+  color: #020617;
+}
+
+.transit-repair-card__meta,
+.transit-repair-card__meta-inline {
+  font-size: 0.82rem;
+  color: #64748b;
+}
+
+.transit-repair-card--full {
+  padding: 1rem 1.1rem;
+}
+
+.transit-side-panel__footer {
+  margin-top: 1rem;
+  width: 100%;
+  border-radius: 1rem;
+  padding: 0.9rem 1rem;
+  text-align: left;
+  font-weight: 700;
+  color: #0f172a;
+  background: rgba(241, 245, 249, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  transition: background 180ms ease, transform 180ms ease;
+}
+
+.transit-side-panel__footer:hover {
+  background: rgba(226, 232, 240, 0.95);
+  transform: translateY(-1px);
+}
+
+.transit-empty-state {
+  border: 1px dashed rgba(148, 163, 184, 0.6);
+  border-radius: 1.25rem;
+  padding: 1rem;
+  background: rgba(248, 250, 252, 0.9);
+  color: #64748b;
+  font-size: 0.92rem;
+}
+
+.transit-scan-panel {
+  position: relative;
+  overflow: hidden;
+  padding: 1.5rem;
+  min-height: 100%;
+}
+
+.transit-scan-panel::before {
+  content: "";
+  position: absolute;
+  inset: auto auto 0 -10%;
+  width: 120%;
+  height: 38%;
+  background: radial-gradient(circle at center, rgba(239, 68, 68, 0.07), transparent 60%);
+  pointer-events: none;
+}
+
+.transit-scan-panel__header {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.transit-scan-panel__eyebrow {
+  color: #991b1b;
+}
+
+.transit-scan-panel__title {
+  margin: 0.35rem 0 0;
+  font-size: clamp(2rem, 3.1vw, 3.25rem);
+  font-weight: 800;
+  line-height: 1.05;
+  color: #020617;
+}
+
+.transit-scan-panel__subtitle {
+  max-width: 40rem;
+  margin: 0.9rem auto 0;
+  color: #475569;
+  font-size: 1rem;
+}
+
+.transit-scan-panel__logo-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 1.25rem 0 1.5rem;
+}
+
+.transit-scan-panel__logo {
+  width: min(24rem, 100%);
+  height: auto;
+  object-fit: contain;
+  user-select: none;
+  pointer-events: none;
+}
+
+.transit-scan-panel__actions {
+  max-width: 38rem;
+  margin: 0 auto;
+}
+
+.transit-list-shell {
+  padding: 1.35rem;
+}
+
+.transit-list-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.2rem;
+}
+
+.transit-list-hero__eyebrow {
+  color: #991b1b;
+}
+
+.transit-list-hero__title {
+  margin: 0.3rem 0 0;
+  font-size: clamp(1.8rem, 2.8vw, 2.6rem);
+  font-weight: 800;
+  line-height: 1.05;
+  color: #020617;
+}
+
+.transit-list-hero__subtitle {
+  margin: 0.8rem 0 0;
+  font-size: 1rem;
+  color: #475569;
+}
+
+.transit-list-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.9rem;
+}
+
+@media (min-width: 1024px) {
+  .transit-home-layout {
+    grid-template-columns: minmax(260px, 1fr) minmax(520px, 1.7fr) minmax(260px, 1fr);
+    gap: 1.25rem;
+  }
+
+  .transit-home-column--center {
+    order: 2;
+  }
+
+  .transit-home-column--left {
+    order: 1;
+  }
+
+  .transit-home-column--right {
+    order: 3;
+  }
+
+  .transit-list-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }

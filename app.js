@@ -1,3 +1,4 @@
+// Timestamp: 2026-06-18 11:31:36 -04:00
 // js/app.js
 
 import {
@@ -25,6 +26,7 @@ import {
   refreshLastCreated,
   refreshLastCreatedFromPodio,
   refreshLastCreatedByInventory,
+  apiListRepairsCache,
   apiListMesBT,
   apiGetBTById,
 } from './api.js';
@@ -299,6 +301,12 @@ let currentScreen = 'accueil';
 let warrantyWatchTimer = null;
 let warrantyWatchStartedAt = null;
 let lastOperationItem = null;
+let homeRepairsSummary = {
+  all: [],
+  open: [],
+  done: [],
+  error: '',
+};
 
 const TERMINE_CHOICES = [
   { label: 'Terminer la réparation', next: 4 },   // Réparation terminée
@@ -397,6 +405,475 @@ function cleanRichText(val) {
   s = s.replace(/<br\s*\/?>/gi, '\n');
 
   return s.trim();
+}
+
+function mergeRepairCacheItem(raw) {
+  const dto = raw?.dto && typeof raw.dto === 'object' ? raw.dto : null;
+  return dto ? { ...dto, ...raw } : (raw || {});
+}
+
+function getRepairStateId(item) {
+  const raw = item?.state ?? item?.etat ?? item?.final_state ?? null;
+  if (typeof raw === 'number') return raw;
+  if (typeof raw === 'string') {
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+}
+
+function getRepairInventory(item) {
+  return (
+    item?.inventory ??
+    item?.inventory_uqam ??
+    item?.numeroInventaire ??
+    item?.numero_inventaire ??
+    item?.no_inventaire ??
+    ''
+  ).toString().trim();
+}
+
+function getRepairReferenceId(item) {
+  const raw = item?.app_item_id ?? item?.appItemId ?? item?.id_unique ?? item?.id ?? item?.item_id ?? '';
+  return String(raw || '').trim();
+}
+
+function getRepairTitleSummary(item) {
+  const raw = (
+    item?.marque_modele ??
+    item?.marqueModele ??
+    item?.title ??
+    item?.description ??
+    ''
+  ).toString().trim();
+
+  if (!raw) return 'Titre indisponible';
+  if (!raw.includes('|')) return raw;
+  return raw.split('|')[0].trim() || raw;
+}
+
+function getRepairCreatedAtValue(item) {
+  const candidates = [
+    item?.createdAt,
+    item?.created_at,
+    item?.date_creation,
+    item?.open_date,
+    item?.updated_at,
+    item?.dateCreation,
+    item?.creationDate,
+  ];
+
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    const d = new Date(candidate);
+    if (!Number.isNaN(d.getTime())) {
+      return d;
+    }
+  }
+
+  return null;
+}
+
+function getRepairSortValue(item) {
+  const d = getRepairCreatedAtValue(item);
+  if (d) return d.getTime();
+
+  const ref = Number(item?.app_item_id ?? item?.appItemId ?? item?.id ?? 0);
+  return Number.isFinite(ref) ? ref : 0;
+}
+
+function formatRepairShortDate(item) {
+  const d = getRepairCreatedAtValue(item);
+  if (!d) return 'Date inconnue';
+
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function isOpenRepairForAccueil(item) {
+  return getRepairStateId(item) === 1;
+}
+
+function isDoneRepairForAccueil(item) {
+  return getRepairStateId(item) === 4;
+}
+
+function buildHomeRepairsSummary(items) {
+  const normalized = items
+    .map(mergeRepairCacheItem)
+    .filter((it) => it && !it.deleted && !it.isDeleted && !it.archived)
+    .sort((a, b) => getRepairSortValue(b) - getRepairSortValue(a));
+
+  return {
+    all: normalized,
+    open: normalized.filter(isOpenRepairForAccueil).slice(0, 5),
+    done: normalized.filter(isDoneRepairForAccueil).slice(0, 5),
+    error: '',
+  };
+}
+
+function renderAccueilListItems(items, emptyLabel) {
+  if (!items.length) {
+    return `
+      <div class="transit-empty-state">
+        ${escapeHtml(emptyLabel)}
+      </div>
+    `;
+  }
+
+  return items.map((item) => {
+    const ref = escapeHtml(getRepairReferenceId(item));
+    const code = escapeHtml(formatAppItemCode(item) || 'Sans code');
+    const title = escapeHtml(getRepairTitleSummary(item));
+    const inventory = escapeHtml(getRepairInventory(item) || 'Inventaire inconnu');
+    const dateLabel = escapeHtml(formatRepairShortDate(item));
+    const stateId = getRepairStateId(item);
+    const stateClass = escapeHtml(etatColor(stateId || 0));
+    const stateLabel = escapeHtml(item?.etat_label || item?.stateLabel || etatLabel(stateId || 0));
+
+    return `
+      <button
+        type="button"
+        class="transit-repair-card"
+        data-repair-open="${ref}"
+      >
+        <div class="transit-repair-card__topline">
+          <span class="transit-repair-card__code">${code}</span>
+          <span class="inline-block px-2 py-1 rounded-full text-xs font-semibold text-black ${stateClass}">
+            ${stateLabel}
+          </span>
+        </div>
+        <div class="transit-repair-card__title">${title}</div>
+        <div class="transit-repair-card__meta">
+          <span>Inventaire ${inventory}</span>
+          <span>${dateLabel}</span>
+        </div>
+      </button>
+    `;
+  }).join('');
+}
+
+function renderAccueilColumn(title, accentClass, items, emptyLabel, actionLabel, actionKey, totalCount = items.length) {
+  return `
+    <section class="transit-side-panel">
+      <div class="transit-side-panel__header">
+        <div>
+          <p class="transit-side-panel__eyebrow ${accentClass}">${escapeHtml(title)}</p>
+          <h3 class="transit-side-panel__title">${escapeHtml(title)}</h3>
+        </div>
+        <div class="transit-side-panel__count">${totalCount}</div>
+      </div>
+
+      <div class="transit-side-panel__body">
+        ${renderAccueilListItems(items, emptyLabel)}
+      </div>
+
+      <button
+        type="button"
+        class="transit-side-panel__footer"
+        data-repair-list="${escapeHtml(actionKey)}"
+      >
+        ${escapeHtml(actionLabel)}
+      </button>
+    </section>
+  `;
+}
+
+async function openRepairFromSummaryRef(ref) {
+  const target = homeRepairsSummary.all.find((item) => getRepairReferenceId(item) === String(ref));
+  if (!target) {
+    alert("Impossible de retrouver ce dossier.");
+    return;
+  }
+
+  const inventory = getRepairInventory(target);
+  const refId = getRepairReferenceId(target);
+
+  showBusy(true);
+  try {
+    if (inventory) {
+      await onScan(inventory, true);
+      return;
+    }
+
+    if (refId) {
+      const item = await apiGetBTById(refId);
+      const inv = getRepairInventory(item);
+      if (!inv) {
+        alert("Ce bon ne contient aucun numéro d'inventaire.");
+        return;
+      }
+      await onScan(inv, true);
+      return;
+    }
+
+    alert("Aucune référence exploitable pour ouvrir ce dossier.");
+  } catch (err) {
+    console.error('Erreur ouverture dossier résumé', err);
+    alert("Impossible d'ouvrir ce dossier pour le moment.");
+  } finally {
+    showBusy(false);
+  }
+}
+
+function screenRepairsByAccueilState(kind) {
+  currentScreen = `accueil-list-${kind}`;
+
+  const isOpen = kind === 'open';
+  const items = homeRepairsSummary.all.filter(isOpen ? isOpenRepairForAccueil : isDoneRepairForAccueil);
+  const title = isOpen ? 'Tous les dossiers ouverts' : 'Toutes les réparations terminées';
+  const subtitle = isOpen
+    ? "Les dossiers créés et pas encore reçus."
+    : "Les dossiers qui ont atteint l'état Réparation terminée.";
+  const idBack = 'back_' + Math.random().toString(36).slice(2);
+
+  const html = `
+    <div class="transit-list-shell">
+      <div class="transit-list-hero">
+        <div>
+          <p class="transit-list-hero__eyebrow">${isOpen ? 'Transit - réception' : 'Transit - atelier'}</p>
+          <h2 class="transit-list-hero__title">${escapeHtml(title)}</h2>
+          <p class="transit-list-hero__subtitle">${escapeHtml(subtitle)}</p>
+        </div>
+        <div class="transit-list-hero__badge">${items.length}</div>
+      </div>
+
+      <div class="transit-list-grid">
+        ${items.length ? items.map((item) => `
+          <button
+            type="button"
+            class="transit-repair-card transit-repair-card--full"
+            data-repair-open="${escapeHtml(getRepairReferenceId(item))}"
+          >
+            <div class="transit-repair-card__topline">
+              <span class="transit-repair-card__code">${escapeHtml(formatAppItemCode(item) || 'Sans code')}</span>
+              <span class="transit-repair-card__meta-inline">
+                Inventaire ${escapeHtml(getRepairInventory(item) || 'inconnu')}
+              </span>
+            </div>
+            <div class="transit-repair-card__title">${escapeHtml(getRepairTitleSummary(item))}</div>
+            <div class="transit-repair-card__meta">
+              <span>${escapeHtml(item?.etat_label || item?.stateLabel || etatLabel(getRepairStateId(item) || 0))}</span>
+              <span>${escapeHtml(formatRepairShortDate(item))}</span>
+            </div>
+          </button>
+        `).join('') : `
+          <div class="transit-empty-state">Aucun dossier à afficher.</div>
+        `}
+      </div>
+
+      <div class="mt-6">
+        ${btn("Retour à l'accueil", { id: idBack, outline: true })}
+      </div>
+    </div>
+  `;
+
+  setScreen(html);
+
+  document.getElementById(idBack).onclick = () => gotoAccueil();
+
+  document.querySelectorAll('[data-repair-open]').forEach((el) => {
+    el.addEventListener('click', () => {
+      openRepairFromSummaryRef(el.getAttribute('data-repair-open') || '');
+    });
+  });
+}
+
+function screenAccueil() {
+  currentScreen = 'accueil';
+  isManualMode = false;
+
+  const idManualBtn = 'manual_' + Math.random().toString(36).slice(2);
+  const openTotal = homeRepairsSummary.all.filter(isOpenRepairForAccueil).length;
+  const doneTotal = homeRepairsSummary.all.filter(isDoneRepairForAccueil).length;
+  const overviewError = homeRepairsSummary.error
+    ? `<div class="transit-home-banner">${escapeHtml(homeRepairsSummary.error)}</div>`
+    : '';
+
+  const html = `
+    <div class="transit-home-shell">
+      ${overviewError}
+
+      <div class="transit-home-layout">
+        <div class="transit-home-column transit-home-column--side transit-home-column--left">
+          ${renderAccueilColumn(
+            'Dossiers ouverts',
+            'transit-side-panel__eyebrow--open',
+            homeRepairsSummary.open,
+            openTotal
+              ? 'Aucun dossier ouvert parmi les plus récents.'
+              : 'Aucun dossier ouvert en ce moment.',
+            openTotal > 5 ? `Afficher tous les dossiers ouverts (${openTotal})` : 'Afficher tous les dossiers ouverts',
+            'open',
+            openTotal
+          )}
+        </div>
+
+        <section class="transit-home-column transit-home-column--center">
+          <div class="transit-scan-panel">
+            <div class="transit-scan-panel__header">
+              <p class="transit-scan-panel__eyebrow">Transit - réception des réparations</p>
+              <h2 class="transit-scan-panel__title">Numérisez le code d'inventaire</h2>
+              <p class="transit-scan-panel__subtitle">
+                Le kiosque est prêt à ouvrir une fiche existante ou démarrer un nouveau dossier.
+              </p>
+            </div>
+
+            ${CONFIG.LOGO_URL ? `
+              <div class="relative transit-scan-panel__logo-wrap">
+                <img
+                  src="${CONFIG.LOGO_URL}"
+                  alt="Logo scan"
+                  class="transit-scan-panel__logo"
+                />
+                ${
+                  IS_MOBILE
+                    ? `
+                      <button
+                        id="btn-mobile-scan"
+                        type="button"
+                        class="absolute inset-0 w-full h-full mx-auto cursor-pointer bg-transparent"
+                        aria-label="Scanner le code avec la caméra du téléphone"
+                      ></button>
+                    `
+                    : ''
+                }
+              </div>
+            ` : ''}
+
+            <div class="transit-scan-panel__actions">
+              ${btn('Saisie manuelle', { id: idManualBtn, outline: true })}
+            </div>
+
+            <div id="manual-block" class="mt-2 w-full hidden">
+              <input
+                id="scan-manual"
+                class="border rounded-xl p-4 text-2xl w-full mb-2 focus:ring-2 focus:ring-black"
+                placeholder="Ex.: 1074531 ou REP1515"
+                enterkeyhint="done"
+                autocomplete="off"
+              />
+              <div class="text-gray-500 text-sm mb-3">
+                Vous pouvez entrer le numéro d'inventaire ou de réparation au clavier, puis appuyer sur Enter ↵
+                ou utiliser le bouton « Rechercher ».
+              </div>
+              <button
+                id="btn-manual-submit"
+                type="button"
+                class="px-6 py-3 rounded-xl text-xl font-semibold w-full bg-black text-white hover:opacity-90 shadow"
+              >
+                Rechercher
+              </button>
+            </div>
+
+            <input
+              id="scan-hidden"
+              class="opacity-0 h-0 w-0 absolute -left-[9999px]"
+              autocomplete="off"
+            />
+          </div>
+        </section>
+
+        <div class="transit-home-column transit-home-column--side transit-home-column--right">
+          ${renderAccueilColumn(
+            'Réparations terminées',
+            'transit-side-panel__eyebrow--done',
+            homeRepairsSummary.done,
+            doneTotal
+              ? 'Aucune réparation terminée parmi les plus récentes.'
+              : 'Aucune réparation terminée en ce moment.',
+            doneTotal > 5 ? `Afficher toutes les réparations terminées (${doneTotal})` : 'Afficher toutes les réparations terminées',
+            'done',
+            doneTotal
+          )}
+        </div>
+      </div>
+    </div>
+  `;
+
+  setScreen(html);
+  app.dataset.screen = 'accueil';
+
+  const hiddenInput = document.getElementById('scan-hidden');
+  if (hiddenInput) {
+    attachScanHandlerScan(hiddenInput);
+
+    if (!IS_MOBILE) {
+      hiddenInput.setAttribute('autofocus', 'autofocus');
+      focusHiddenScanner();
+      setTimeout(focusHiddenScanner, 50);
+      setTimeout(focusHiddenScanner, 300);
+      setTimeout(focusHiddenScanner, 1000);
+    }
+  }
+
+  document.querySelectorAll('[data-repair-open]').forEach((el) => {
+    el.addEventListener('click', () => {
+      openRepairFromSummaryRef(el.getAttribute('data-repair-open') || '');
+    });
+  });
+
+  document.querySelectorAll('[data-repair-list]').forEach((el) => {
+    el.addEventListener('click', () => {
+      const kind = el.getAttribute('data-repair-list') || '';
+      if (kind === 'open' || kind === 'done') {
+        screenRepairsByAccueilState(kind);
+      }
+    });
+  });
+
+  const btnManual = document.getElementById(idManualBtn);
+  const manualBlock = document.getElementById('manual-block');
+  const manualInput = document.getElementById('scan-manual');
+  const btnManualSubmit = document.getElementById('btn-manual-submit');
+
+  let submitManual = null;
+  if (manualInput) {
+    submitManual = attachScanHandlerManual(manualInput);
+  }
+
+  if (btnManual && manualBlock && manualInput) {
+    btnManual.onclick = () => {
+      isManualMode = !isManualMode;
+
+      const hiddenScanner = document.getElementById('scan-hidden');
+
+      if (isManualMode) {
+        manualBlock.classList.remove('hidden');
+
+        if (hiddenScanner) {
+          hiddenScanner.blur();
+        }
+
+        manualInput.focus();
+
+        if (btnManualSubmit && submitManual) {
+          btnManualSubmit.onclick = () => {
+            submitManual();
+          };
+        }
+      } else {
+        manualBlock.classList.add('hidden');
+        manualInput.value = '';
+        focusHiddenScanner();
+      }
+    };
+  }
+
+  if (IS_MOBILE) {
+    const btnMobileScan = document.getElementById('btn-mobile-scan');
+    if (btnMobileScan) {
+      btnMobileScan.onclick = () => {
+        if (window.mobileStartScan) {
+          window.mobileStartScan();
+        } else {
+          alert("Le mode caméra n'est pas disponible sur ce téléphone.");
+        }
+      };
+    }
+  }
 }
 
 
@@ -567,7 +1044,7 @@ if (typeof window !== 'undefined') {
 
 
 /////////////////////////////////   ÉCRAN D'ACCUEIL    //////////////////////////////////////////////
-function screenAccueil() {
+function screenAccueilLegacy_unused() {
 currentScreen = 'accueil';
 isManualMode = false;
   const idManualBtn = 'manual_' + Math.random().toString(36).slice(2);
@@ -2288,6 +2765,47 @@ function scheduleRefreshDernierBon(delayMs) {
 
 
 async function loadLastFromRepairsListAndMaybeWarn() {
+  try {
+    const rawItems = await apiListRepairsCache(200);
+    homeRepairsSummary = buildHomeRepairsSummary(rawItems);
+    lastRepairsList = homeRepairsSummary.all.slice();
+
+    if (!lastRepairsList.length) {
+      if (app.dataset.screen === 'accueil') {
+        screenAccueil();
+      }
+      return;
+    }
+
+    const merged = lastRepairsList[0];
+
+    lastCreatedItem = merged;
+    lastOperationItem = merged;
+
+    try {
+      localStorage.setItem('kiosque_lastCreatedItem', JSON.stringify(merged));
+      localStorage.setItem('kiosque_lastOperationItem', JSON.stringify(merged));
+    } catch (e) {
+      console.warn('Impossible de sauver kiosque_lastCreatedItem / kiosque_lastOperationItem (merged)', e);
+    }
+
+    if (app.dataset.screen === 'accueil') {
+      screenAccueil();
+    }
+  } catch (e) {
+    console.error('loadLastFromRepairsListAndMaybeWarn error', e);
+    homeRepairsSummary = {
+      ...homeRepairsSummary,
+      error: "Impossible de charger les dossiers récents pour l'accueil.",
+    };
+
+    if (app.dataset.screen === 'accueil') {
+      screenAccueil();
+    }
+  }
+}
+
+async function loadLastFromRepairsListAndMaybeWarnLegacy_unused() {
   try {
     const res = await fetch(CONFIG.REPAIRS_CACHE_API, { method: 'GET' });
     if (!res.ok) {

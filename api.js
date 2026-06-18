@@ -1,3 +1,4 @@
+// Timestamp: 2026-06-18 11:31:36 -04:00
 // js/api.js
 import { CONFIG } from './config.js';
 
@@ -45,6 +46,32 @@ export async function apiListMesBT(username) {
   }
 
   return data.items || [];
+}
+
+export async function apiListRepairsCache(limit = 100) {
+  if (!CONFIG.REPAIRS_CACHE_API) {
+    throw new Error("REPAIRS_CACHE_API manquant");
+  }
+
+  const url = new URL(CONFIG.REPAIRS_CACHE_API);
+  const wantedLimit = Number(limit);
+  if (Number.isFinite(wantedLimit) && wantedLimit > 0) {
+    url.searchParams.set("limit", String(Math.floor(wantedLimit)));
+  }
+
+  const res = await fetch(url.toString(), { method: "GET" });
+  if (!res.ok) {
+    const text = await res.text();
+    console.error("Erreur apiListRepairsCache", res.status, text);
+    throw new Error(`repairs-cache error ${res.status}`);
+  }
+
+  const data = await res.json();
+  if (!data || data.ok === false) {
+    throw new Error(data?.error || "Erreur inconnue dans apiListRepairsCache");
+  }
+
+  return Array.isArray(data.items) ? data.items : [];
 }
 
 // Recherche d'un BT par ID unique ou code (ex. "REP1437", "rep1437", "1437")
