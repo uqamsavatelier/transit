@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Kiosque de réparation – Mobile</title>
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="img/kiosque-favicon-64.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Tailwind (comme sur la version ordi) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="./kiosque.css" />
+
+  <!-- ZXing pour le scan de codes-barres (caméra) -->
+  <script src="https://unpkg.com/@zxing/library@0.21.3"></script>
+</head>
+
+<body class="min-h-screen bg-gray-100 flex flex-col items-center p-6">
+  <!-- PAS de header sur mobile pour l’instant, app.js gère le cas header=null -->
+
+  <!-- Bouton + panneau de menu (hamburger) -->
+  <div id="kiosque-menu-root" class="fixed top-3 right-3 z-50">
+    <!-- Bouton hamburger -->
+    <button
+      id="kiosque-menu-toggle"
+      class="flex items-center justify-center w-10 h-10 rounded-full bg-white/90 shadow-md border border-gray-200 hover:bg-gray-100 active:scale-95 transition"
+      type="button"
+      aria-label="Ouvrir le menu"
+    >
+      <div class="flex flex-col items-center justify-center gap-1">
+        <span class="block w-5 h-0.5 bg-gray-800 rounded"></span>
+        <span class="block w-5 h-0.5 bg-gray-800 rounded"></span>
+        <span class="block w-5 h-0.5 bg-gray-800 rounded"></span>
+      </div>
+    </button>
+
+    <!-- Panneau du menu -->
+    <div
+      id="kiosque-menu-panel"
+      class="absolute right-0 mt-2 w-52 rounded-xl bg-white shadow-lg border border-gray-200 py-2 hidden"
+    >
+        <!-- Texte Bonjour X (dans le menu) -->
+    <div
+      id="kiosque-user-greeting"
+      class="w-full text-right px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden"
+    >
+      <!-- rempli par JS : "Bonjour Nicholas" -->
+    </div>
+
+      <button
+        class="w-full text-right px-4 py-2 text-sm hover:bg-gray-100 tracking-wide"
+        data-menu-action="home"
+        type="button"
+      >
+        <span>Accueil</span>
+      </button>
+
+      <button
+        class="w-full text-right px-4 py-2 text-sm hover:bg-gray-100 tracking-wide"
+        data-menu-action="bt-associes"
+        type="button"
+      >
+        <span>Mes BT</span>
+      </button>
+
+      <button
+        class="w-full text-right px-4 py-2 text-sm hover:bg-gray-100 tracking-wide"
+        data-menu-action="rapports"
+        type="button"
+      >
+        <span>Rapports</span>
+      </button>
+
+      <div class="my-1 border-t border-gray-200"></div>
+
+      <button
+        class="w-full text-right px-4 py-2 text-sm hover:bg-red-50 text-red-600 tracking-wide"
+        data-menu-action="logout"
+        type="button"
+      >
+        <span>Déconnexion</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Overlay caméra pour mobile -->
+  <div
+    id="mobile-camera-overlay"
+    class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50"
+  >
+    <div class="w-full max-w-md mx-4">
+      <div class="bg-black rounded-2xl overflow-hidden mb-3">
+        <div class="relative w-full aspect-[2/1]">
+          <video
+            id="mobile-video"
+            class="w-full h-full object-cover"
+            autoplay
+            playsinline
+          ></video>
+        </div>
+      </div>
+
+      <div
+        id="mobile-scan-status"
+        class="mb-3 text-xs text-gray-200 text-center"
+      >
+        Scan en cours… placez l’étiquette dans le cadre.
+      </div>
+
+      <button
+        id="btn-mobile-close"
+        class="w-full py-3 rounded-xl font-semibold bg-white text-black"
+        type="button"
+      >
+        Fermer la caméra
+      </button>
+    </div>
+  </div>
+  
+  <!-- Conteneur principal de l'app -->
+  <main class="flex-1 flex items-center justify-center px-4 py-6">
+    <div id="app" class="w-full max-w-3xl"></div>
+    </main>
+
+  <!-- IMPORTANT : app.js en module (comme desktop) -->
+  <script type="module" src="./app.js"></script>
+
+  <!-- Script spécifique mobile (caméra) -->
+  <script src="./mobile-scan.js"></script>
+</body>
+</html>

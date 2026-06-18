@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <script>
+  (function () {
+    var ua = navigator.userAgent || "";
+    var isMobile = /Android|iPhone|iPad|iPod/i.test(ua);
+
+    // Si on est sur mobile ET qu'on n'est pas déjà sur index-mobile.html
+    if (isMobile && !location.pathname.endsWith('index-mobile.html')) {
+      // Redirection vers la version mobile
+      location.replace('index-mobile.html');
+    }
+  })();
+</script>
+
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Kiosque de réception des réparations</title>
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="img/kiosque-favicon-64.png" />
+
+  <!-- Tailwind via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Ton CSS custom -->
+  <link rel="stylesheet" href="./kiosque.css" />
+</head>
+
+<body class="min-h-screen bg-gray-100 flex flex-col items-center p-6">
+  <!-- Header (pourra servir plus tard si tu veux y mettre un logo, etc.) -->
+  <header class="w-full max-w-4xl flex items-center justify-between mb-6">
+  </header>
+
+  <!-- Bouton + panneau de menu (hamburger) -->
+<div id="kiosque-menu-root" class="fixed top-3 right-3 z-50" relative>
+
+  <!-- Bouton hamburger -->
+  <button
+  id="kiosque-menu-toggle"
+  class="flex items-center justify-center w-10 h-10 rounded-full bg-white/90 shadow-md border border-gray-200 hover:bg-gray-100 active:scale-95 transition"
+  type="button"
+  aria-label="Ouvrir le menu"
+>
+  <!-- Conteneur en colonne pour les 3 barres -->
+  <div class="flex flex-col items-center justify-center gap-1">
+    <span class="block w-5 h-0.5 bg-gray-800 rounded"></span>
+    <span class="block w-5 h-0.5 bg-gray-800 rounded"></span>
+    <span class="block w-5 h-0.5 bg-gray-800 rounded"></span>
+  </div>
+</button>
+
+
+  <!-- Panneau du menu -->
+  <div
+    id="kiosque-menu-panel"
+    class="absolute right-0 mt-2 w-52 rounded-xl bg-white shadow-lg border border-gray-200 py-2 hidden"
+  >
+      <!-- Texte Bonjour X -->
+  <div
+    id="kiosque-user-greeting"
+    class="w-full text-right px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide"
+  >
+    <!-- rempli par JS : "Bonjour Nicholas" -->
+  </div>
+
+    <button
+      class="w-full text-right px-4 py-2 text-sm hover:bg-gray-100 tracking-wide"
+      data-menu-action="home"
+      type="button"
+    >
+      <span>Accueil</span>
+    </button>
+
+    <button
+      class="w-full text-right px-4 py-2 text-sm hover:bg-gray-100 tracking-wide"
+      data-menu-action="bt-associes"
+      type="button"
+    >
+      <span>Mes BT</span>
+    </button>
+
+    <button
+      class="w-full text-right px-4 py-2 text-sm hover:bg-gray-100 tracking-wide"
+      data-menu-action="rapports"
+      type="button"
+    >
+      <span>Rapports</span>
+    </button>
+
+    <div class="my-1 border-t border-gray-200"></div>
+
+    <button
+      class="w-full text-right px-4 py-2 text-sm hover:bg-red-50 text-red-600 tracking-wide"
+      data-menu-action="logout"
+      type="button"
+    >
+      <span>Déconnexion</span>
+    </button>
+  </div>
+</div>
+
+
+  <!-- Conteneur principal de l'app -->
+  <main id="app" class="w-full max-w-4xl"></main>
+
+  <!-- App Script (tout ton JS est maintenant dans js/app.js) -->
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
