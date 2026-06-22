@@ -1,4 +1,4 @@
-// Timestamp: 2026-06-18 14:59:06 -04:00
+// Timestamp: 2026-06-18 15:12:11 -04:00
 // js/app.js
 
 import {
@@ -3021,6 +3021,7 @@ function handleMenuAction(action) {
 function updateMenuForRole() {
   const user = CURRENT_USER || loadCurrentUser();
   const role = user?.role || null;
+  const username = (user?.username || '').toLowerCase().trim();
 
   // Boutons du menu (dans le panel)
   const btnHome    = document.querySelector('[data-menu-action="home"]');
@@ -3029,19 +3030,22 @@ function updateMenuForRole() {
   const btnLogout  = document.querySelector('[data-menu-action="logout"]');
 
   const isViewerRole = role === 'viewer';
+  const hideMesBt = isViewerRole || username === 'user_gen';
 
   if (isViewerRole) {
     // 🔹 Kiosque / viewer : on cache tout sauf Déconnexion
     if (btnHome)    btnHome.classList.add('hidden');
-    if (btnMesBT)   btnMesBT.classList.add('hidden');
     if (btnRapport) btnRapport.classList.add('hidden');
     if (btnLogout)  btnLogout.classList.remove('hidden');
   } else {
     // 🔹 Tech / admin : tout est visible (si présent dans le DOM)
     if (btnHome)    btnHome.classList.remove('hidden');
-    if (btnMesBT)   btnMesBT.classList.remove('hidden');
     if (btnRapport) btnRapport.classList.remove('hidden');
     if (btnLogout)  btnLogout.classList.remove('hidden');
+  }
+
+  if (btnMesBT) {
+    btnMesBT.classList.toggle('hidden', hideMesBt);
   }
 }
 
