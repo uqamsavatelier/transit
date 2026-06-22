@@ -1,4 +1,4 @@
-// Timestamp: 2026-06-18 15:12:11 -04:00
+// Timestamp: 2026-06-22 08:49:12 -04:00
 // js/app.js
 
 import {
@@ -27,6 +27,7 @@ import {
   refreshLastCreatedFromPodio,
   refreshLastCreatedByInventory,
   apiFetchOverviewHome,
+  apiFetchOverviewList,
   apiListRepairsCache,
   apiListMesBT,
   apiGetBTById,
@@ -88,6 +89,10 @@ function isTech() {
 }
 function isViewer() {
   return CURRENT_USER && CURRENT_USER.role === 'viewer';
+}
+function canAccessMesBT(user = CURRENT_USER || loadCurrentUser()) {
+  const role = user?.role || '';
+  return role === 'tech' || role === 'admin';
 }
 // ======================
 // DÉCONNEXION
@@ -666,18 +671,22 @@ async function openRepairFromSummaryRef(ref) {
   }
 }
 
-function screenRepairsByAccueilState(kind) {
-  currentScreen = `accueil-list-${kind}`;
+async function screenRepairsByAccueilState(kind) {
+  const safeKind = kind === 'done' ? 'done' : 'open';
+  const screenKey = `accueil-list-${safeKind}`;
+  currentScreen = screenKey;
 
-  const isOpen = kind === 'open';
-  const items = homeRepairsSummary.all.filter(isOpen ? isOpenRepairForAccueil : isDoneRepairForAccueil);
+  const isOpen = safeKind === 'open';
   const title = isOpen ? 'Tous les dossiers ouverts' : 'Toutes les réparations terminées';
   const subtitle = isOpen
     ? "Les dossiers créés et pas encore reçus."
     : "Les dossiers qui ont atteint l'état Réparation terminée.";
   const idBack = 'back_' + Math.random().toString(36).slice(2);
+  const wantedTotal = isOpen
+    ? Number(homeRepairsSummary.openTotal) || 0
+    : Number(homeRepairsSummary.doneTotal) || 0;
 
-  const html = `
+  const renderListScreen = (items, totalCount, extraMessage = '') => `
     <div class="transit-list-shell">
       <div class="transit-list-hero">
         <div>
@@ -685,10 +694,11 @@ function screenRepairsByAccueilState(kind) {
           <h2 class="transit-list-hero__title">${escapeHtml(title)}</h2>
           <p class="transit-list-hero__subtitle">${escapeHtml(subtitle)}</p>
         </div>
-        <div class="transit-list-hero__badge">${items.length}</div>
+        <div class="transit-list-hero__badge">${totalCount}</div>
       </div>
 
       <div class="transit-list-grid">
+        ${extraMessage ? `<div class="transit-empty-state">${escapeHtml(extraMessage)}</div>` : ''}
         ${items.length ? items.map((item) => `
           <button
             type="button"
@@ -707,9 +717,9 @@ function screenRepairsByAccueilState(kind) {
               <span>${escapeHtml(formatRepairShortDate(item))}</span>
             </div>
           </button>
-        `).join('') : `
+        `).join('') : (!extraMessage ? `
           <div class="transit-empty-state">Aucun dossier à afficher.</div>
-        `}
+        ` : '')}
       </div>
 
       <div class="mt-6">
@@ -718,15 +728,43 @@ function screenRepairsByAccueilState(kind) {
     </div>
   `;
 
-  setScreen(html);
+  const bindListEvents = () => {
+    const backBtn = document.getElementById(idBack);
+    if (backBtn) {
+      backBtn.onclick = () => gotoAccueil();
+    }
 
-  document.getElementById(idBack).onclick = () => gotoAccueil();
-
-  document.querySelectorAll('[data-repair-open]').forEach((el) => {
-    el.addEventListener('click', () => {
-      openRepairFromSummaryRef(el.getAttribute('data-repair-open') || '');
+    document.querySelectorAll('[data-repair-open]').forEach((el) => {
+      el.addEventListener('click', () => {
+        openRepairFromSummaryRef(el.getAttribute('data-repair-open') || '');
+      });
     });
-  });
+  };
+
+  setScreen(renderListScreen([], wantedTotal, 'Chargement des dossiers...'));
+  bindListEvents();
+
+  try {
+    const result = await apiFetchOverviewList(
+      safeKind,
+      5000,
+      0
+    );
+
+    if (currentScreen !== screenKey) {
+      return;
+    }
+
+    setScreen(renderListScreen(result.items, result.total));
+    bindListEvents();
+  } catch (err) {
+    console.error('Erreur chargement liste accueil', err);
+    if (currentScreen !== screenKey) {
+      return;
+    }
+    setScreen(renderListScreen([], wantedTotal, "Impossible de charger la liste complète pour le moment."));
+    bindListEvents();
+  }
 }
 
 function screenAccueil() {
@@ -1524,7 +1562,7 @@ function screenListeEtats(titre, currentEtatId, onSelect) {
       }).join('')}
     </div>
 
-    ${btn('Retour', { id: idBack, outline: true })}
+    ${btn("Retour à l'accueil", { id: idBack, outline: true })}
   `));
 
   // clic sur un état
@@ -1551,7 +1589,7 @@ function screenTerminer(onPick, onBack, onChange) {
 
     ${onChange ? btn("Changer l'état", { id: idChange, outline: true }) : ''}
 
-    ${btn('Retour', { id: idB, outline: true })}
+    ${btn("Retour à l'accueil", { id: idB, outline: true })}
   `));
 
   TERMINE_CHOICES.forEach((c, i) => {
@@ -1612,7 +1650,7 @@ function screenTerminerDetails(item, inv) {
 
     <div class="flex gap-3">
       ${btn('Enregistrer et terminer', { id: idOk })}
-      ${btn('Retour', { id: idBack, outline: true })}
+      ${btn("Retour à l'accueil", { id: idBack, outline: true })}
     </div>
   `));
 
@@ -1856,7 +1894,7 @@ function screenRemettreOuChanger(item, onRemettre, onChange, onBack) {
         ${!isViewer() ? btn("Changer l'état", { id: idChange, outline: true }) : ''}
       </div>
 
-      ${btn('Retour', { id: idBack, outline: true })}
+      ${btn("Retour à l'accueil", { id: idBack, outline: true })}
 
     </div>
   `));
@@ -2290,7 +2328,7 @@ async function onScan(inv, skipWarning = false) {
         setScreen(card(`
           <h2 class="text-2xl font-semibold mb-2">${formatIdTitre(item)}</h2>
           <div class="text-gray-600 mb-6">État actuel (brut) : ${item.state}</div>
-          ${btn('Retour', { id: idBack, outline: true })}
+          ${btn("Retour à l'accueil", { id: idBack, outline: true })}
         `));
 
         document.getElementById(idBack).onclick = () => gotoAccueil();
@@ -2305,7 +2343,7 @@ async function onScan(inv, skipWarning = false) {
           ${btn("Changer l'état", { id: idChange })}
           ${btn('Terminer / Remettre', { id: idTerm, outline: true })}
         </div>
-        ${btn('Retour', { id: idBack, outline: true })}
+        ${btn("Retour à l'accueil", { id: idBack, outline: true })}
       `));
 
 
@@ -2569,14 +2607,14 @@ async function onScan(inv, skipWarning = false) {
           <!-- Boutons d’action -->
           ${
             isViewer()
-              ? btn('Retour', { id: idBack, outline: true })
+              ? btn("Retour à l'accueil", { id: idBack, outline: true })
               : `
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   ${btn("Changer l'état", { id: idChange })}
                   ${btn('Terminer / Remettre', { id: idTerm, outline: true })}
                 </div>
 
-                ${btn('Retour', { id: idBack, outline: true })}
+                ${btn("Retour à l'accueil", { id: idBack, outline: true })}
               `
           }
         </div>
@@ -2989,8 +3027,8 @@ function handleMenuAction(action) {
 
     case 'bt-associes':
       console.log('[MENU] Mes BT');
-      if (isViewer()) {
-        alert("Cette section n'est pas disponible pour le compte kiosque.");
+      if (!canAccessMesBT()) {
+        alert("Cette section n'est pas disponible pour ce compte.");
         break;
       }
       afficherMesBT();
@@ -3021,7 +3059,6 @@ function handleMenuAction(action) {
 function updateMenuForRole() {
   const user = CURRENT_USER || loadCurrentUser();
   const role = user?.role || null;
-  const username = (user?.username || '').toLowerCase().trim();
 
   // Boutons du menu (dans le panel)
   const btnHome    = document.querySelector('[data-menu-action="home"]');
@@ -3030,7 +3067,7 @@ function updateMenuForRole() {
   const btnLogout  = document.querySelector('[data-menu-action="logout"]');
 
   const isViewerRole = role === 'viewer';
-  const hideMesBt = isViewerRole || username === 'user_gen';
+  const hideMesBt = !canAccessMesBT(user);
 
   if (isViewerRole) {
     // 🔹 Kiosque / viewer : on cache tout sauf Déconnexion

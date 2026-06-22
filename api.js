@@ -1,4 +1,4 @@
-// Timestamp: 2026-06-18 14:59:06 -04:00
+// Timestamp: 2026-06-22 08:49:12 -04:00
 // js/api.js
 import { CONFIG } from './config.js';
 
@@ -90,6 +90,38 @@ export async function apiFetchOverviewHome(limit = 5) {
     doneTotal: Number(data.doneTotal) || 0,
     open: Array.isArray(data.open) ? data.open : [],
     done: Array.isArray(data.done) ? data.done : [],
+  };
+}
+
+export async function apiFetchOverviewList(kind = 'open', limit = 500, offset = 0) {
+  const safeKind = kind === 'done' ? 'done' : 'open';
+  const wantedLimit = Number(limit);
+  const wantedOffset = Number(offset);
+  const params = new URLSearchParams({
+    kind: safeKind,
+    limit: String(
+      Number.isFinite(wantedLimit) && wantedLimit > 0
+        ? Math.floor(wantedLimit)
+        : 500
+    ),
+    offset: String(
+      Number.isFinite(wantedOffset) && wantedOffset >= 0
+        ? Math.floor(wantedOffset)
+        : 0
+    ),
+  });
+
+  const data = await api(`/repairs/overview/list?${params.toString()}`, { method: 'GET' });
+  if (!data || data.ok === false) {
+    throw new Error(data?.error || 'Erreur inconnue dans apiFetchOverviewList');
+  }
+
+  return {
+    kind: data.kind === 'done' ? 'done' : 'open',
+    total: Number(data.total) || 0,
+    items: Array.isArray(data.items) ? data.items : [],
+    limit: Number(data.limit) || 0,
+    offset: Number(data.offset) || 0,
   };
 }
 
