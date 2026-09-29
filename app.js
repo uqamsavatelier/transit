@@ -18,7 +18,7 @@ import {
   PRESETS,
   ID_AUTRE,
   secteurColor,
-} from './config.js?v=2.7.8';
+} from './config.js?v=2.7.9';
 
 import {
   api,
@@ -32,7 +32,7 @@ import {
   apiListRepairsCache,
   apiListMesBT,
   apiGetBTById,
-} from './api.js?v=2.7.8';
+} from './api.js?v=2.7.9';
 
 console.log('[KIOSQUE] app.js chargé');
 
@@ -553,6 +553,42 @@ function showPendingAttentionWarning() {
   const warning = pendingAttentionWarning;
   pendingAttentionWarning = null;
   showAttentionModal(warning.title, warning.message);
+}
+
+async function watchCreatedRepairEnrichment(item) {
+  const appItemId = item?.app_item_id ?? item?.appItemId ?? null;
+  if (!appItemId) return;
+
+  const maxAttempts = 20;
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    try {
+      const response = await refreshLastCreatedFromPodio(appItemId);
+      const enriched = response?.item ?? response;
+      if (!enriched) continue;
+
+      const typeId = Number(
+        enriched.typeReparation ?? enriched.type_reparation ?? enriched.typeReparationId
+      );
+      if (typeId !== 3 && !isSousGarantie(enriched)) continue;
+
+      lastCreatedItem = { ...item, ...enriched };
+      lastOperationItem = lastCreatedItem;
+      try {
+        localStorage.setItem('kiosque_lastCreatedItem', JSON.stringify(lastCreatedItem));
+        localStorage.setItem('kiosque_lastOperationItem', JSON.stringify(lastOperationItem));
+      } catch (e) {
+        console.warn('Impossible de sauver le BT enrichi', e);
+      }
+
+      showScanWarningIfNeeded(null, lastCreatedItem);
+      if (app.dataset.screen === 'accueil') showPendingAttentionWarning();
+      return;
+    } catch (e) {
+      console.warn('Enrichissement Hector pas encore disponible', e);
+    }
+  }
 }
 
 function mergeRepairCacheItem(raw) {
@@ -3008,7 +3044,9 @@ async function creerBT(inv, extra = {}) {
 
     // 5) Confirmation de création. L'avertissement de garantie est affiché
     // dès le scan à partir des données Hector.
+    const needsEnrichmentWatch = !pendingAttentionWarning;
     screenCreationSuccess(dto);
+    if (needsEnrichmentWatch) void watchCreatedRepairEnrichment(dto);
 
   } catch (e) {
     console.error(e);
