@@ -1681,6 +1681,16 @@ function screenTerminerDetails(item, inv) {
         return;
       }
 
+      const updated = { ...item, ...(res.item || {}), state: 4 };
+      const operationCode = formatAppItemCode(item);
+      lastOperationItem = updated;
+      try {
+        localStorage.setItem('kiosque_lastOperationItem', JSON.stringify(updated));
+      } catch (e) {
+        console.warn('Impossible de sauver kiosque_lastOperationItem', e);
+      }
+      callCacheSync(updated);
+
       // On tente de recharger le dernier bon à partir de l'app_item_id,
       // mais sans casser le flux si ça échoue.
       const appItemId = item.app_item_id ?? item.appItemId ?? item.id;
@@ -1693,6 +1703,7 @@ function screenTerminerDetails(item, inv) {
       }
 
       gotoAccueil();
+      showOperationToast(getStateOperationMessage(4, operationCode));
     } catch (e) {
       console.error(e);
       alert("Erreur réseau / serveur lors de la mise à jour");
@@ -1940,18 +1951,33 @@ function showOperationToast(message) {
   }, OPERATION_TOAST_DURATION_MS);
 }
 
-function screenCreationSuccess(item, operationType = 'creation') {
+function getStateOperationMessage(state, code) {
+  const stateId = Number(state);
+  let operation;
+
+  if (stateId === 5) operation = 'accusé de réception';
+  else if (stateId === 4) operation = 'réparation terminée';
+  else if (stateId === 6) operation = 'appareil remis';
+  else if (stateId === 7) operation = 'bon annulé';
+  else operation = `changement d'état vers « ${etatLabel(stateId)} »`;
+
+  return `Dernière opération: ${operation}${code ? ` ${code}` : ''}`;
+}
+
+function screenCreationSuccess(item, operationType = 'creation', codeOverride = '') {
   const idBack = 'back_' + Math.random().toString(36).slice(2);
 
   // Cacher le header
   const header = document.querySelector('header');
   if (header) header.style.display = 'none';
 
-  const code   = formatAppItemCode(item);
+  const code   = codeOverride || formatAppItemCode(item);
   const titre  = item.title || '';
   const inv    = item.inventory || lastInventory || '';
   const isReception = operationType === 'reception';
-  const toastMessage = `Dernière opération: ${isReception ? 'accusé de réception' : 'création du bon'}${code ? ` ${code}` : ''}`;
+  const toastMessage = isReception
+    ? getStateOperationMessage(5, code)
+    : `Dernière opération: création du bon${code ? ` ${code}` : ''}`;
 
   const etatId = typeof item.state === 'number' ? item.state : Number(item.state);
   const etatTxt = etatId ? etatLabel(etatId) : '—';
@@ -2694,11 +2720,13 @@ async function onScan(inv, skipWarning = false) {
 async function majEtat(item, state) {
   showBusy(true);
   try {
+    const operationCode = formatAppItemCode(item);
+
     // 1) Mise à jour de l'état dans Podio via kiosque-reparation
     const res = await api('/repairs/update', { body: { id: item.id, state } });
 
     const updated = res && res.item
-      ? res.item
+      ? { ...item, ...res.item }
       : { ...item, state };
 
     // 2) Appel stats/update (sans casser le kiosque si ça plante)
@@ -2730,9 +2758,10 @@ async function majEtat(item, state) {
 
 
     if (Number(state) === 5) {
-      screenCreationSuccess(updated, 'reception');
+      screenCreationSuccess(updated, 'reception', operationCode);
     } else {
       gotoAccueil();
+      showOperationToast(getStateOperationMessage(state, operationCode));
     }
   } catch (e) {
     console.error(e);
