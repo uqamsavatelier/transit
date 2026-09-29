@@ -18,7 +18,7 @@ import {
   PRESETS,
   ID_AUTRE,
   secteurColor,
-} from './config.js?v=2.7.4';
+} from './config.js?v=2.7.6';
 
 import {
   api,
@@ -32,7 +32,7 @@ import {
   apiListRepairsCache,
   apiListMesBT,
   apiGetBTById,
-} from './api.js?v=2.7.4';
+} from './api.js?v=2.7.6';
 
 console.log('[KIOSQUE] app.js chargé');
 
@@ -453,6 +453,10 @@ function showAttentionModal(title, message) {
   const close = () => {
     document.removeEventListener('keydown', onKeyDown);
     overlay.remove();
+    app.classList.add('kiosque-repaint');
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => app.classList.remove('kiosque-repaint'));
+    });
     focusHiddenScanner();
   };
   const onKeyDown = (event) => {
@@ -467,6 +471,56 @@ function showAttentionModal(title, message) {
   closeButton.focus();
 }
 
+function getHectorAttribute(item, id, preferredField = 'value') {
+  const collections = [
+    item?.attributes,
+    item?.assetAttributes,
+    item?.attributeValueCollection,
+    item?.attributes?.attributeValueCollection,
+  ];
+  const attribute = collections
+    .filter(Array.isArray)
+    .flat()
+    .find((entry) => Number(entry?.id) === id);
+
+  return attribute?.[preferredField] ?? attribute?.value ?? null;
+}
+
+function getHectorWarrantyInfo(item) {
+  if (!item) return { isUnderWarranty: false, fournisseur: '' };
+
+  const fournisseur = String(
+    getHectorAttribute(item, 12, 'valueAsText') ??
+    item.fournisseur ?? item.supplier ?? item.vendor?.name ?? ''
+  ).trim();
+  let warrantyValue =
+    item.warrantyDate ?? item.warrantyEnd ?? item.warrantyEndDate ??
+    getHectorAttribute(item, 15) ?? null;
+
+  if (!warrantyValue) {
+    const purchaseValue = item.acquiredDate ?? item.purchaseDate ?? item.dateAcquisition ?? null;
+    const purchaseDate = purchaseValue ? new Date(purchaseValue) : null;
+    if (purchaseDate && !Number.isNaN(purchaseDate.getTime())) {
+      purchaseDate.setFullYear(purchaseDate.getFullYear() + 1);
+      warrantyValue = purchaseDate;
+    }
+  }
+
+  const warrantyDate = warrantyValue ? new Date(warrantyValue) : null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  return {
+    isUnderWarranty: Boolean(
+      warrantyDate &&
+      !Number.isNaN(warrantyDate.getTime()) &&
+      warrantyDate >= today &&
+      warrantyDate.getFullYear() >= 1900
+    ),
+    fournisseur,
+  };
+}
+
 function showScanWarningIfNeeded(hectorLookup, item) {
   if (hectorLookup && hectorLookup.found === false) {
     showAttentionModal(
@@ -479,9 +533,10 @@ function showScanWarningIfNeeded(hectorLookup, item) {
   const typeId = Number(
     item?.typeReparation ?? item?.type_reparation ?? item?.typeReparationId
   );
-  if (item && (typeId === 3 || isSousGarantie(item))) {
+  const hectorWarranty = getHectorWarrantyInfo(hectorLookup?.item);
+  if (typeId === 3 || isSousGarantie(item) || hectorWarranty.isUnderWarranty) {
     const fournisseur = String(
-      item.fournisseur ?? item.supplier ?? item.vendor ?? ''
+      item?.fournisseur ?? item?.supplier ?? item?.vendor ?? hectorWarranty.fournisseur ?? ''
     ).trim();
     showAttentionModal(
       'Attention, appareil sous garantie',
@@ -1513,7 +1568,7 @@ function screenCreationDemande(inv) {
         </label>
         <textarea
           id="description-probleme"
-          class="border rounded-xl px-3 py-2 text-lg w-full min-h-[120px]"
+          class="kiosque-textarea border rounded-xl px-3 py-2 text-lg w-full min-h-[120px]"
           placeholder="Ex.: L'appareil ne s'allume plus, bruit étrange, etc."
         ></textarea>
       </div>
@@ -2927,12 +2982,9 @@ async function creerBT(inv, extra = {}) {
     callCacheSync(dto);
 
 
-    // 5) Navigation selon la garantie
-    if (isSousGarantie(dto)) {
-      warrantyWarnedForId = dto.id ?? dto.appItemId ?? null;
-    } else {
-      screenCreationSuccess(dto);
-    }
+    // 5) Confirmation de création. L'avertissement de garantie est affiché
+    // dès le scan à partir des données Hector.
+    screenCreationSuccess(dto);
 
   } catch (e) {
     console.error(e);

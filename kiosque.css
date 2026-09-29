@@ -110,6 +110,27 @@ button {
   outline: none;
 }
 
+input,
+textarea,
+select {
+  -webkit-user-select: text;
+  user-select: text;
+  color: #0f172a;
+  caret-color: #0f172a;
+  -webkit-text-fill-color: #0f172a;
+}
+
+.kiosque-textarea {
+  background: #fff;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  contain: paint;
+}
+
+.kiosque-repaint {
+  transform: translateZ(0);
+}
+
 /* === Cadre de scan mobile === */
 
 @keyframes scan-blink {
