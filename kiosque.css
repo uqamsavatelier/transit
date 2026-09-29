@@ -128,6 +128,11 @@ select {
   -webkit-text-fill-color: #0f172a !important;
   caret-color: #0f172a !important;
   pointer-events: auto;
+  -webkit-user-select: text;
+  user-select: text;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  cursor: text;
 }
 
 .kiosque-textarea:focus {
@@ -137,6 +142,13 @@ select {
   -webkit-text-fill-color: #0f172a !important;
   outline: 2px solid #0f172a;
   outline-offset: 2px;
+}
+
+.kiosque-textarea:empty::before {
+  content: attr(data-placeholder);
+  color: #6b7280;
+  -webkit-text-fill-color: #6b7280;
+  pointer-events: none;
 }
 
 .kiosque-repaint {

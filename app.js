@@ -18,7 +18,7 @@ import {
   PRESETS,
   ID_AUTRE,
   secteurColor,
-} from './config.js?v=2.7.9';
+} from './config.js?v=2.7.10';
 
 import {
   api,
@@ -32,7 +32,7 @@ import {
   apiListRepairsCache,
   apiListMesBT,
   apiGetBTById,
-} from './api.js?v=2.7.9';
+} from './api.js?v=2.7.10';
 
 console.log('[KIOSQUE] app.js chargé');
 
@@ -1610,13 +1610,16 @@ function screenCreationDemande(inv) {
         <label class="block text-sm font-semibold mb-1" for="description-probleme">
           Description du problème
         </label>
-        <textarea
+        <div
           id="description-probleme"
           class="kiosque-textarea border rounded-xl px-3 py-2 text-lg w-full min-h-[120px] bg-white text-slate-900"
-          placeholder="Ex.: L'appareil ne s'allume plus, bruit étrange, etc."
-          autocomplete="off"
+          contenteditable="true"
+          role="textbox"
+          aria-multiline="true"
+          tabindex="0"
+          data-placeholder="Ex.: L'appareil ne s'allume plus, bruit étrange, etc."
           spellcheck="false"
-        ></textarea>
+        ></div>
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
@@ -1632,15 +1635,6 @@ function screenCreationDemande(inv) {
   const inputEmail     = document.getElementById('demandeur-email');
   const inputDesc      = document.getElementById('description-probleme');
 
-  const focusDescription = (event) => {
-    if (document.activeElement === inputDesc) return;
-    event.preventDefault();
-    inputDesc.focus({ preventScroll: true });
-    const end = inputDesc.value.length;
-    inputDesc.setSelectionRange(end, end);
-  };
-  inputDesc.addEventListener('pointerdown', focusDescription);
-  inputDesc.addEventListener('touchstart', focusDescription, { passive: false });
   inputDesc.addEventListener('click', () => inputDesc.focus({ preventScroll: true }));
 
   function updateDemandeurVisibility() {
@@ -1673,7 +1667,7 @@ function screenCreationDemande(inv) {
 
   document.getElementById(idValider).onclick = () => {
     const secteurId = Number(selSecteur.value || '0');
-    const desc      = (inputDesc.value || "").trim();
+    const desc      = (inputDesc.innerText || inputDesc.textContent || "").trim();
     let nomPrenom   = (inputNom.value || "").trim();
     let courriel    = (inputEmail.value || "").trim();
 

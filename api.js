@@ -1,6 +1,6 @@
 // Timestamp: 2026-06-22 08:49:12 -04:00
 // js/api.js
-import { CONFIG } from './config.js?v=2.7.9';
+import { CONFIG } from './config.js?v=2.7.10';
 
 // Appel générique à l’API kiosque-reparation (Edge function)
 export async function api(path, opts = {}) {
