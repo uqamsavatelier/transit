@@ -122,9 +122,6 @@ select {
 
 .kiosque-textarea {
   background: #fff;
-  transform: translateZ(0);
-  backface-visibility: hidden;
-  contain: paint;
 }
 
 .kiosque-repaint {

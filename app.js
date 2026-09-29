@@ -18,7 +18,7 @@ import {
   PRESETS,
   ID_AUTRE,
   secteurColor,
-} from './config.js?v=2.7.6';
+} from './config.js?v=2.7.7';
 
 import {
   api,
@@ -32,7 +32,7 @@ import {
   apiListRepairsCache,
   apiListMesBT,
   apiGetBTById,
-} from './api.js?v=2.7.6';
+} from './api.js?v=2.7.7';
 
 console.log('[KIOSQUE] app.js chargé');
 
@@ -309,6 +309,7 @@ let warrantyWatchTimer = null;
 let warrantyWatchStartedAt = null;
 let lastOperationItem = null;
 let operationToastTimer = null;
+let pendingAttentionWarning = null;
 const SUCCESS_SCREEN_DURATION_MS = 5000;
 const OPERATION_TOAST_DURATION_MS = 30000;
 let homeRepairsSummary = {
@@ -523,10 +524,10 @@ function getHectorWarrantyInfo(item) {
 
 function showScanWarningIfNeeded(hectorLookup, item) {
   if (hectorLookup && hectorLookup.found === false) {
-    showAttentionModal(
-      'Inventaire non répertorié',
-      "Ce numéro d'inventaire n'est pas répertorié dans Hector."
-    );
+    pendingAttentionWarning = {
+      title: 'Inventaire non répertorié',
+      message: "Ce numéro d'inventaire n'est pas répertorié dans Hector.",
+    };
     return;
   }
 
@@ -538,13 +539,20 @@ function showScanWarningIfNeeded(hectorLookup, item) {
     const fournisseur = String(
       item?.fournisseur ?? item?.supplier ?? item?.vendor ?? hectorWarranty.fournisseur ?? ''
     ).trim();
-    showAttentionModal(
-      'Attention, appareil sous garantie',
-      fournisseur
+    pendingAttentionWarning = {
+      title: 'Attention, appareil sous garantie',
+      message: fournisseur
         ? `Cet appareil est sous garantie. Veuillez contacter ${fournisseur}.`
-        : 'Cet appareil est sous garantie. Veuillez contacter le fournisseur.'
-    );
+        : 'Cet appareil est sous garantie. Veuillez contacter le fournisseur.',
+    };
   }
+}
+
+function showPendingAttentionWarning() {
+  if (!pendingAttentionWarning) return;
+  const warning = pendingAttentionWarning;
+  pendingAttentionWarning = null;
+  showAttentionModal(warning.title, warning.message);
 }
 
 function mergeRepairCacheItem(raw) {
@@ -1586,6 +1594,14 @@ function screenCreationDemande(inv) {
   const inputEmail     = document.getElementById('demandeur-email');
   const inputDesc      = document.getElementById('description-probleme');
 
+  let descriptionPaintToggle = false;
+  inputDesc.addEventListener('input', () => {
+    descriptionPaintToggle = !descriptionPaintToggle;
+    inputDesc.style.boxShadow = descriptionPaintToggle
+      ? 'inset 0 0 0 0.01px rgba(15, 23, 42, 0.001)'
+      : 'inset 0 0 0 0.02px rgba(15, 23, 42, 0.001)';
+  });
+
   function updateDemandeurVisibility() {
     const secteurId = Number(selSecteur.value || '0');
 
@@ -2141,12 +2157,14 @@ function screenCreationSuccess(item, operationType = 'creation', codeOverride = 
 const timeoutId = setTimeout(() => {
   gotoAccueil();
   showOperationToast(toastMessage);
+  showPendingAttentionWarning();
 }, SUCCESS_SCREEN_DURATION_MS);
 
 document.getElementById(idBack).onclick = () => {
   clearTimeout(timeoutId);
   gotoAccueil();
   showOperationToast(toastMessage);
+  showPendingAttentionWarning();
 };
 
 
@@ -2448,6 +2466,7 @@ function screenAdminReportSelection() {
 // ===== LOGIQUE =====
 async function onScan(inv, skipWarning = false) {
   lastInventory = inv;
+  pendingAttentionWarning = null;
   showBusy(true);
 
   try {
