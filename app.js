@@ -307,6 +307,9 @@ let currentScreen = 'accueil';
 let warrantyWatchTimer = null;
 let warrantyWatchStartedAt = null;
 let lastOperationItem = null;
+let operationToastTimer = null;
+const SUCCESS_SCREEN_DURATION_MS = 5000;
+const OPERATION_TOAST_DURATION_MS = 30000;
 let homeRepairsSummary = {
   all: [],
   open: [],
@@ -1914,7 +1917,30 @@ function screenRemettreOuChanger(item, onRemettre, onChange, onBack) {
 
 
 /////////////////////////////////   ÉCRAN BT CRÉÉ!    //////////////////////////////////////////////
-function screenCreationSuccess(item) {
+function showOperationToast(message) {
+  let toast = document.getElementById('operation-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'operation-toast';
+    toast.className = 'operation-toast';
+    toast.setAttribute('role', 'status');
+    toast.setAttribute('aria-live', 'polite');
+    document.body.appendChild(toast);
+  }
+
+  toast.textContent = message;
+  toast.classList.remove('operation-toast--visible');
+  void toast.offsetWidth;
+  toast.classList.add('operation-toast--visible');
+
+  if (operationToastTimer) clearTimeout(operationToastTimer);
+  operationToastTimer = setTimeout(() => {
+    toast.classList.remove('operation-toast--visible');
+    operationToastTimer = null;
+  }, OPERATION_TOAST_DURATION_MS);
+}
+
+function screenCreationSuccess(item, operationType = 'creation') {
   const idBack = 'back_' + Math.random().toString(36).slice(2);
 
   // Cacher le header
@@ -1924,6 +1950,8 @@ function screenCreationSuccess(item) {
   const code   = formatAppItemCode(item);
   const titre  = item.title || '';
   const inv    = item.inventory || lastInventory || '';
+  const isReception = operationType === 'reception';
+  const toastMessage = `Dernière opération: ${isReception ? 'accusé de réception' : 'création du bon'}${code ? ` ${code}` : ''}`;
 
   const etatId = typeof item.state === 'number' ? item.state : Number(item.state);
   const etatTxt = etatId ? etatLabel(etatId) : '—';
@@ -1937,15 +1965,14 @@ function screenCreationSuccess(item) {
   setScreen(`
     <div class="min-h-[60vh] flex flex-col items-center justify-center text-center">
       <h2 class="text-3xl font-bold mb-4">
-        Bon de réparation créé
+        ${isReception ? 'Réception confirmée' : 'Bon de réparation créé'}
       </h2>
 
       <p class="mb-3 text-xl">
-        Bon de réparation
-        ${code ? `<span class="font-semibold">${code}</span>` : ''}
-        pour l'appareil
-        <span class="font-semibold">${inv}</span>
-        créé avec succès !
+        ${isReception
+          ? `La réception du bon ${code ? `<span class="font-semibold">${code}</span>` : ''} a été confirmée avec succès !`
+          : `Bon de réparation ${code ? `<span class="font-semibold">${code}</span>` : ''} pour l'appareil <span class="font-semibold">${inv}</span> créé avec succès !`
+        }
       </p>
 
       <p class="text-sm text-gray-600 mb-8">
@@ -1957,14 +1984,14 @@ function screenCreationSuccess(item) {
   `);
 
 const timeoutId = setTimeout(() => {
-  // Retour auto à l'accueil, avec refresh à 3s
   gotoAccueil();
-}, 5000);
+  showOperationToast(toastMessage);
+}, SUCCESS_SCREEN_DURATION_MS);
 
 document.getElementById(idBack).onclick = () => {
   clearTimeout(timeoutId);
-  // Retour immédiat à l'accueil, avec refresh à 3s
   gotoAccueil();
+  showOperationToast(toastMessage);
 };
 
 
@@ -2702,7 +2729,11 @@ async function majEtat(item, state) {
     callCacheSync(updated);
 
 
-    gotoAccueil();
+    if (Number(state) === 5) {
+      screenCreationSuccess(updated, 'reception');
+    } else {
+      gotoAccueil();
+    }
   } catch (e) {
     console.error(e);
     alert("Échec de la mise à jour de l'état");

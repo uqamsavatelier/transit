@@ -4,6 +4,33 @@ html, body {
   height: 100%;
 }
 
+.operation-toast {
+  position: fixed;
+  left: 50%;
+  bottom: max(1.25rem, env(safe-area-inset-bottom));
+  z-index: 100;
+  width: min(calc(100% - 2rem), 42rem);
+  padding: 1rem 1.25rem;
+  border: 1px solid #bbf7d0;
+  border-radius: 0.5rem;
+  background: #f0fdf4;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.2);
+  color: #14532d;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.4;
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 1rem);
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.operation-toast--visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
 body {
   -webkit-user-select: none;
   user-select: none;
