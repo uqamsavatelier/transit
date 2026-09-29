@@ -18,7 +18,7 @@ import {
   PRESETS,
   ID_AUTRE,
   secteurColor,
-} from './config.js?v=2.7.11';
+} from './config.js?v=2.7.12';
 
 import {
   api,
@@ -32,7 +32,7 @@ import {
   apiListRepairsCache,
   apiListMesBT,
   apiGetBTById,
-} from './api.js?v=2.7.11';
+} from './api.js?v=2.7.12';
 
 console.log('[KIOSQUE] app.js chargé');
 
@@ -522,7 +522,7 @@ function showScanWarningIfNeeded(hectorLookup, item) {
   if (hectorLookup && hectorLookup.found === false) {
     pendingAttentionWarning = {
       title: 'Inventaire non répertorié',
-      message: "Ce numéro d'inventaire n'est pas répertorié dans Hector.",
+      message: "Numéro d'inventaire non répertorié dans Hector. Vérifiez si le numéro inscrit correspond bien à celui de l'appareil.",
     };
     return;
   }
