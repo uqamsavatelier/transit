@@ -18,7 +18,7 @@ import {
   PRESETS,
   ID_AUTRE,
   secteurColor,
-} from './config.js?v=2.7.10';
+} from './config.js?v=2.7.11';
 
 import {
   api,
@@ -32,7 +32,7 @@ import {
   apiListRepairsCache,
   apiListMesBT,
   apiGetBTById,
-} from './api.js?v=2.7.10';
+} from './api.js?v=2.7.11';
 
 console.log('[KIOSQUE] app.js chargé');
 
@@ -454,10 +454,6 @@ function showAttentionModal(title, message) {
   const close = () => {
     document.removeEventListener('keydown', onKeyDown);
     overlay.remove();
-    app.classList.add('kiosque-repaint');
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => app.classList.remove('kiosque-repaint'));
-    });
     focusHiddenScanner();
   };
   const onKeyDown = (event) => {
@@ -1610,16 +1606,13 @@ function screenCreationDemande(inv) {
         <label class="block text-sm font-semibold mb-1" for="description-probleme">
           Description du problème
         </label>
-        <div
+        <textarea
           id="description-probleme"
           class="kiosque-textarea border rounded-xl px-3 py-2 text-lg w-full min-h-[120px] bg-white text-slate-900"
-          contenteditable="true"
-          role="textbox"
-          aria-multiline="true"
-          tabindex="0"
-          data-placeholder="Ex.: L'appareil ne s'allume plus, bruit étrange, etc."
+          placeholder="Ex.: L'appareil ne s'allume plus, bruit étrange, etc."
+          autocomplete="off"
           spellcheck="false"
-        ></div>
+        ></textarea>
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
@@ -1634,8 +1627,6 @@ function screenCreationDemande(inv) {
   const inputNom       = document.getElementById('demandeur-nom');
   const inputEmail     = document.getElementById('demandeur-email');
   const inputDesc      = document.getElementById('description-probleme');
-
-  inputDesc.addEventListener('click', () => inputDesc.focus({ preventScroll: true }));
 
   function updateDemandeurVisibility() {
     const secteurId = Number(selSecteur.value || '0');
@@ -1667,7 +1658,7 @@ function screenCreationDemande(inv) {
 
   document.getElementById(idValider).onclick = () => {
     const secteurId = Number(selSecteur.value || '0');
-    const desc      = (inputDesc.innerText || inputDesc.textContent || "").trim();
+    const desc      = (inputDesc.value || "").trim();
     let nomPrenom   = (inputNom.value || "").trim();
     let courriel    = (inputEmail.value || "").trim();
 
