@@ -18,7 +18,7 @@ import {
   PRESETS,
   ID_AUTRE,
   secteurColor,
-} from './config.js?v=2.7.7';
+} from './config.js?v=2.7.8';
 
 import {
   api,
@@ -32,7 +32,7 @@ import {
   apiListRepairsCache,
   apiListMesBT,
   apiGetBTById,
-} from './api.js?v=2.7.7';
+} from './api.js?v=2.7.8';
 
 console.log('[KIOSQUE] app.js chargé');
 
@@ -1576,8 +1576,10 @@ function screenCreationDemande(inv) {
         </label>
         <textarea
           id="description-probleme"
-          class="kiosque-textarea border rounded-xl px-3 py-2 text-lg w-full min-h-[120px]"
+          class="kiosque-textarea border rounded-xl px-3 py-2 text-lg w-full min-h-[120px] bg-white text-slate-900"
           placeholder="Ex.: L'appareil ne s'allume plus, bruit étrange, etc."
+          autocomplete="off"
+          spellcheck="false"
         ></textarea>
       </div>
 
@@ -1594,13 +1596,16 @@ function screenCreationDemande(inv) {
   const inputEmail     = document.getElementById('demandeur-email');
   const inputDesc      = document.getElementById('description-probleme');
 
-  let descriptionPaintToggle = false;
-  inputDesc.addEventListener('input', () => {
-    descriptionPaintToggle = !descriptionPaintToggle;
-    inputDesc.style.boxShadow = descriptionPaintToggle
-      ? 'inset 0 0 0 0.01px rgba(15, 23, 42, 0.001)'
-      : 'inset 0 0 0 0.02px rgba(15, 23, 42, 0.001)';
-  });
+  const focusDescription = (event) => {
+    if (document.activeElement === inputDesc) return;
+    event.preventDefault();
+    inputDesc.focus({ preventScroll: true });
+    const end = inputDesc.value.length;
+    inputDesc.setSelectionRange(end, end);
+  };
+  inputDesc.addEventListener('pointerdown', focusDescription);
+  inputDesc.addEventListener('touchstart', focusDescription, { passive: false });
+  inputDesc.addEventListener('click', () => inputDesc.focus({ preventScroll: true }));
 
   function updateDemandeurVisibility() {
     const secteurId = Number(selSecteur.value || '0');

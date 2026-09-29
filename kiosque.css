@@ -99,8 +99,6 @@ html, body {
 }
 
 body {
-  -webkit-user-select: none;
-  user-select: none;
   font-family: "Segoe UI Variable Text", "Segoe UI", Tahoma, Geneva, sans-serif;
   color: #0f172a;
 }
@@ -121,7 +119,24 @@ select {
 }
 
 .kiosque-textarea {
-  background: #fff;
+  position: relative;
+  z-index: 1;
+  display: block;
+  opacity: 1 !important;
+  background: #fff !important;
+  color: #0f172a !important;
+  -webkit-text-fill-color: #0f172a !important;
+  caret-color: #0f172a !important;
+  pointer-events: auto;
+}
+
+.kiosque-textarea:focus {
+  opacity: 1 !important;
+  background: #fff !important;
+  color: #0f172a !important;
+  -webkit-text-fill-color: #0f172a !important;
+  outline: 2px solid #0f172a;
+  outline-offset: 2px;
 }
 
 .kiosque-repaint {
