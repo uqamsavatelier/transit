@@ -31,6 +31,73 @@ html, body {
   transform: translate(-50%, 0);
 }
 
+.attention-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background: rgba(15, 23, 42, 0.48);
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
+}
+
+.attention-modal__panel {
+  width: min(100%, 34rem);
+  padding: 1.75rem;
+  border: 1px solid #fecaca;
+  border-radius: 0.5rem;
+  background: #fff;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.32);
+  text-align: center;
+}
+
+.attention-modal__accent {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  margin: 0 auto 1rem;
+  border-radius: 50%;
+  background: #dc2626;
+  color: #fff;
+  font-size: 1.75rem;
+  font-weight: 800;
+}
+
+.attention-modal__title {
+  margin: 0;
+  color: #7f1d1d;
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.attention-modal__message {
+  margin: 1rem 0 1.5rem;
+  color: #334155;
+  font-size: 1.05rem;
+  line-height: 1.55;
+}
+
+.attention-modal__button {
+  width: 100%;
+  min-height: 3.25rem;
+  border-radius: 0.5rem;
+  background: #111827;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.attention-modal__button:hover,
+.attention-modal__button:focus-visible {
+  background: #000;
+}
+
 body {
   -webkit-user-select: none;
   user-select: none;

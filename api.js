@@ -1,6 +1,6 @@
 // Timestamp: 2026-06-22 08:49:12 -04:00
 // js/api.js
-import { CONFIG } from './config.js';
+import { CONFIG } from './config.js?v=2.7.4';
 
 // Appel générique à l’API kiosque-reparation (Edge function)
 export async function api(path, opts = {}) {
@@ -174,6 +174,22 @@ export async function apiLookupInventory(inventory) {
   );
   if (!res.ok) throw new Error(`lookup error ${res.status}`);
   return res.json();
+}
+
+export async function apiLookupHectorInventory(inventory) {
+  if (!CONFIG.HECTOR_LOOKUP_API) return null;
+
+  const url = new URL(CONFIG.HECTOR_LOOKUP_API);
+  url.searchParams.set('assetTag', String(inventory ?? '').trim());
+
+  const res = await fetch(url.toString(), { method: 'GET' });
+  if (!res.ok) throw new Error(`hector lookup error ${res.status}`);
+
+  const data = await res.json();
+  return {
+    found: Array.isArray(data?.items) && data.items.length > 0,
+    item: Array.isArray(data?.items) ? data.items[0] ?? null : null,
+  };
 }
 
 // Rafraîchit le "dernier bon créé" via repairs-list et podio-lookup

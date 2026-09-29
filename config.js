@@ -5,6 +5,7 @@ export const CONFIG = {
   REPAIRS_CACHE_API: "https://mimjugutzdolfkfpchzc.functions.supabase.co/repairs-cache-latest",
   CACHE_SYNC_API:   "https://mimjugutzdolfkfpchzc.functions.supabase.co/cache-sync",
   LOOKUP_BASE: "https://mimjugutzdolfkfpchzc.functions.supabase.co/podio-lookup",
+  HECTOR_LOOKUP_API: "https://mimjugutzdolfkfpchzc.functions.supabase.co/hector-lookup",
   API_BASE: "https://mimjugutzdolfkfpchzc.functions.supabase.co/kiosque-reparation",
   STATS_REPORT_URL: 'https://mimjugutzdolfkfpchzc.functions.supabase.co/kiosque-reparation/stats/report',
   AUTH_LOGIN_URL: 'https://mimjugutzdolfkfpchzc.supabase.co/functions/v1/auth-login',

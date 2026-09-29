@@ -18,11 +18,12 @@ import {
   PRESETS,
   ID_AUTRE,
   secteurColor,
-} from './config.js';
+} from './config.js?v=2.7.4';
 
 import {
   api,
   apiLookupInventory,
+  apiLookupHectorInventory,
   refreshLastCreated,
   refreshLastCreatedFromPodio,
   refreshLastCreatedByInventory,
@@ -31,7 +32,7 @@ import {
   apiListRepairsCache,
   apiListMesBT,
   apiGetBTById,
-} from './api.js';
+} from './api.js?v=2.7.4';
 
 console.log('[KIOSQUE] app.js chargé');
 
@@ -416,6 +417,79 @@ function cleanRichText(val) {
   s = s.replace(/<br\s*\/?>/gi, '\n');
 
   return s.trim();
+}
+
+function showAttentionModal(title, message) {
+  document.getElementById('attention-modal')?.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'attention-modal';
+  overlay.className = 'attention-modal';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.setAttribute('aria-labelledby', 'attention-modal-title');
+
+  const panel = document.createElement('div');
+  panel.className = 'attention-modal__panel';
+
+  const accent = document.createElement('div');
+  accent.className = 'attention-modal__accent';
+  accent.textContent = '!';
+
+  const heading = document.createElement('h2');
+  heading.id = 'attention-modal-title';
+  heading.className = 'attention-modal__title';
+  heading.textContent = title;
+
+  const body = document.createElement('p');
+  body.className = 'attention-modal__message';
+  body.textContent = message;
+
+  const closeButton = document.createElement('button');
+  closeButton.type = 'button';
+  closeButton.className = 'attention-modal__button';
+  closeButton.textContent = "J'ai compris";
+
+  const close = () => {
+    document.removeEventListener('keydown', onKeyDown);
+    overlay.remove();
+    focusHiddenScanner();
+  };
+  const onKeyDown = (event) => {
+    if (event.key === 'Escape' || event.key === 'Enter') close();
+  };
+
+  closeButton.addEventListener('click', close);
+  document.addEventListener('keydown', onKeyDown);
+  panel.append(accent, heading, body, closeButton);
+  overlay.appendChild(panel);
+  document.body.appendChild(overlay);
+  closeButton.focus();
+}
+
+function showScanWarningIfNeeded(hectorLookup, item) {
+  if (hectorLookup && hectorLookup.found === false) {
+    showAttentionModal(
+      'Inventaire non répertorié',
+      "Ce numéro d'inventaire n'est pas répertorié dans Hector."
+    );
+    return;
+  }
+
+  const typeId = Number(
+    item?.typeReparation ?? item?.type_reparation ?? item?.typeReparationId
+  );
+  if (item && (typeId === 3 || isSousGarantie(item))) {
+    const fournisseur = String(
+      item.fournisseur ?? item.supplier ?? item.vendor ?? ''
+    ).trim();
+    showAttentionModal(
+      'Attention, appareil sous garantie',
+      fournisseur
+        ? `Cet appareil est sous garantie. Veuillez contacter ${fournisseur}.`
+        : 'Cet appareil est sous garantie. Veuillez contacter le fournisseur.'
+    );
+  }
 }
 
 function mergeRepairCacheItem(raw) {
@@ -2322,7 +2396,17 @@ async function onScan(inv, skipWarning = false) {
   showBusy(true);
 
   try {
-    const data = await apiLookupInventory(inv);
+    const [podioResult, hectorResult] = await Promise.allSettled([
+      apiLookupInventory(inv),
+      apiLookupHectorInventory(inv),
+    ]);
+
+    if (podioResult.status === 'rejected') throw podioResult.reason;
+    const data = podioResult.value;
+    const hectorLookup = hectorResult.status === 'fulfilled' ? hectorResult.value : null;
+    if (hectorResult.status === 'rejected') {
+      console.warn('Vérification Hector indisponible', hectorResult.reason);
+    }
 
     // Aucun dossier -> proposer de créer un BT
     if (!data.found) {
@@ -2332,10 +2416,12 @@ async function onScan(inv, skipWarning = false) {
         () => screenCreationDemande(inv),
         () => gotoAccueil()
       );
+      showScanWarningIfNeeded(hectorLookup, null);
       return;
     }
 
     const item   = data.latest;
+    showScanWarningIfNeeded(hectorLookup, item);
 
     // ➜ Dernière opération = dernier élément scanné trouvé
     lastOperationItem = item;
