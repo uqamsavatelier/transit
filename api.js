@@ -168,12 +168,25 @@ export async function apiGetBTById(idUnique) {
 
 
 // Lookup Podio/Hector (Edge podio-lookup)
+async function attachHectorPresence(data) {
+  const item = data?.latest ?? data?.item ?? (data?.id ? data : null);
+  const itemId = item?.item_id ?? item?.id;
+  if (!itemId) return data;
+  try {
+    const presence = await api(`/repairs/hector-presence?item_id=${encodeURIComponent(itemId)}`, { method: 'GET' });
+    item.hector_present = presence.hector_present;
+  } catch (error) {
+    console.warn('Présence Hector indisponible', error);
+  }
+  return data;
+}
+
 export async function apiLookupInventory(inventory) {
   const res = await fetch(
     `${CONFIG.LOOKUP_BASE}/by-inventory?inventory=${encodeURIComponent(inventory)}`
   );
   if (!res.ok) throw new Error(`lookup error ${res.status}`);
-  return res.json();
+  return attachHectorPresence(await res.json());
 }
 
 export async function apiLookupHectorInventory(inventory) {
@@ -215,7 +228,7 @@ export async function refreshLastCreatedFromPodio(appItemId) {
   const url = `${CONFIG.LOOKUP_BASE}/by-app-item-id?app_item_id=${encodeURIComponent(appItemId)}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`lookup by-app-item-id error ${res.status}`);
-  return res.json();
+  return attachHectorPresence(await res.json());
 }
 
 // Variante: rafraîchir par inventaire
@@ -224,7 +237,7 @@ export async function refreshLastCreatedByInventory(inv) {
   const url = `${CONFIG.LOOKUP_BASE}/by-inventory?inventory=${encodeURIComponent(inv)}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`lookup by-inventory error ${res.status}`);
-  return res.json();
+  return attachHectorPresence(await res.json());
 }
 
 // Mock pour DEV local si CONFIG.USE_MOCK === true

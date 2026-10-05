@@ -519,7 +519,7 @@ function getHectorWarrantyInfo(item) {
 }
 
 function showScanWarningIfNeeded(hectorLookup, item) {
-  if (hectorLookup && hectorLookup.found === false) {
+  if (hectorLookup?.found === false || (!hectorLookup && item?.hector_present === false)) {
     pendingAttentionWarning = {
       title: 'Inventaire non répertorié',
       message: "Numéro d'inventaire non répertorié dans Hector. Vérifiez si le numéro inscrit correspond bien à celui de l'appareil.",
@@ -567,7 +567,7 @@ async function watchCreatedRepairEnrichment(item) {
       const typeId = Number(
         enriched.typeReparation ?? enriched.type_reparation ?? enriched.typeReparationId
       );
-      if (typeId !== 3 && !isSousGarantie(enriched)) continue;
+      if (enriched.hector_present !== false && typeId !== 3 && !isSousGarantie(enriched)) continue;
 
       lastCreatedItem = { ...item, ...enriched };
       lastOperationItem = lastCreatedItem;
