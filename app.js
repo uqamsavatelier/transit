@@ -18,7 +18,7 @@ import {
   PRESETS,
   ID_AUTRE,
   secteurColor,
-} from './config.js?v=2.7.15';
+} from './config.js?v=2.7.16';
 
 import {
   api,
@@ -32,7 +32,7 @@ import {
   apiListRepairsCache,
   apiListMesBT,
   apiGetBTById,
-} from './api.js?v=2.7.15';
+} from './api.js?v=2.7.16';
 
 console.log('[KIOSQUE] app.js chargé');
 
