@@ -1,6 +1,6 @@
 // Timestamp: 2026-06-22 08:49:12 -04:00
 // js/api.js
-import { CONFIG } from './config.js?v=2.7.12';
+import { CONFIG } from './config.js?v=2.7.13';
 
 // Appel générique à l’API kiosque-reparation (Edge function)
 export async function api(path, opts = {}) {
@@ -125,20 +125,20 @@ export async function apiFetchOverviewList(kind = 'open', limit = 500, offset = 
   };
 }
 
-// Recherche d'un BT par ID unique ou code (ex. "REP1437", "rep1437", "1437")
+// Recherche d'un BT par numéro de réparation (app_item_id), ex. "REP1437" ou "1437".
+// Le numéro affiché REP#### correspond à l'app_item_id Podio, pas à l'external_id.
 export async function apiGetBTById(idUnique) {
   const value = String(idUnique ?? '').trim();
   if (!value) {
     throw new Error('ID unique vide');
   }
 
-  console.log('[apiGetBTById] Appel /repairs/by-id avec id_unique =', value);
+  console.log('[apiGetBTById] Appel podio-lookup/by-app-item-id avec app_item_id =', value);
 
-  const res = await fetch(`${CONFIG.API_BASE}/repairs/by-id`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id_unique: value }), // ⬅️ cohérent avec le Edge
-  });
+  const res = await fetch(
+    `${CONFIG.LOOKUP_BASE}/by-app-item-id?app_item_id=${encodeURIComponent(value)}`,
+    { method: 'GET' }
+  );
 
   const rawText = await res.text();
   console.log('[apiGetBTById] HTTP', res.status, 'raw response =', rawText);
@@ -151,7 +151,7 @@ export async function apiGetBTById(idUnique) {
     throw new Error("Réponse invalide du serveur");
   }
 
-  // Cas OK
+  // Cas OK : podio-lookup renvoie { ok, found, item }.
   if (res.ok && data && data.ok && data.item) {
     return data.item;
   }

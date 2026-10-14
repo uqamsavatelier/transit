@@ -18,7 +18,7 @@ import {
   PRESETS,
   ID_AUTRE,
   secteurColor,
-} from './config.js?v=2.7.12';
+} from './config.js?v=2.7.13';
 
 import {
   api,
@@ -32,7 +32,7 @@ import {
   apiListRepairsCache,
   apiListMesBT,
   apiGetBTById,
-} from './api.js?v=2.7.12';
+} from './api.js?v=2.7.13';
 
 console.log('[KIOSQUE] app.js chargé');
 
@@ -1215,7 +1215,7 @@ function attachScanHandlerManual(input) {
     console.log('[MANUEL] idUniqueParam =', idUniqueParam, 'raw =', cleaned);
 
 
-    // Si on a identifié un ID unique → appel /repairs/by-id
+    // Si on a identifié un numéro de réparation → recherche par app_item_id
     if (idUniqueParam) {
       try {
         showBusy(true);
