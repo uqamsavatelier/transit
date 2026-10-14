@@ -18,7 +18,7 @@ import {
   PRESETS,
   ID_AUTRE,
   secteurColor,
-} from './config.js?v=2.7.13';
+} from './config.js?v=2.7.15';
 
 import {
   api,
@@ -32,7 +32,7 @@ import {
   apiListRepairsCache,
   apiListMesBT,
   apiGetBTById,
-} from './api.js?v=2.7.13';
+} from './api.js?v=2.7.15';
 
 console.log('[KIOSQUE] app.js chargé');
 
@@ -316,6 +316,7 @@ let homeRepairsSummary = {
   all: [],
   open: [],
   done: [],
+  categories: [],
   openTotal: 0,
   doneTotal: 0,
   error: '',
@@ -370,6 +371,7 @@ function focusHiddenScanner() {
 
 function setScreen(html){
   app.innerHTML = html;
+  document.body.classList.remove('transit-home-active');
   // Par défaut, on efface le marqueur d'écran courant.
   delete app.dataset.screen;
   armIdle();
@@ -743,6 +745,12 @@ function buildHomeRepairsSummary(items) {
     all: normalized,
     open: normalized.filter(isOpenRepairForAccueil).slice(0, 5),
     done: normalized.filter(isDoneRepairForAccueil).slice(0, 5),
+    categories: ETATS.map((state) => ({
+      id: state.id,
+      label: state.label,
+      total: normalized.filter((item) => getRepairStateId(item) === state.id).length,
+      items: normalized.filter((item) => getRepairStateId(item) === state.id),
+    })),
     error: '',
   };
 }
@@ -940,6 +948,120 @@ async function screenRepairsByAccueilState(kind) {
 }
 
 function screenAccueil() {
+  currentScreen = 'accueil';
+  isManualMode = false;
+
+  const idManualBtn = 'manual_' + Math.random().toString(36).slice(2);
+  const overviewError = homeRepairsSummary.error
+    ? `<div class="transit-home-banner">${escapeHtml(homeRepairsSummary.error)}</div>`
+    : '';
+  const categories = homeRepairsSummary.categories.length
+    ? homeRepairsSummary.categories
+    : buildHomeRepairsSummary(lastRepairsList).categories;
+  const categoryPanels = categories.map((category) => `
+    <section class="transit-category-panel transit-category-panel--state-${Number(category.id)}">
+      <button type="button" class="transit-category-toggle" data-category-toggle="${Number(category.id)}" aria-expanded="false">
+        <span>${escapeHtml(category.label)}</span>
+        <span class="transit-category-count">(${Number(category.total) || 0})</span>
+      </button>
+      <div class="transit-category-body" data-category-body="${Number(category.id)}" hidden>
+        ${renderAccueilListItems(Array.isArray(category.items) ? category.items : [], 'Aucune réparation dans cette catégorie.')}
+      </div>
+    </section>
+  `).join('');
+
+  const html = `
+    <div class="transit-home-shell">
+      ${overviewError}
+      <section class="transit-scan-panel">
+        <div class="transit-scan-panel__header">
+          <h2 class="transit-scan-panel__title">Num&eacute;risez le code d'inventaire</h2>
+        </div>
+        ${CONFIG.LOGO_URL ? `
+          <div class="relative transit-scan-panel__logo-wrap">
+            <img src="${CONFIG.LOGO_URL}" alt="Logo scan" class="transit-scan-panel__logo" />
+            ${IS_MOBILE ? '<button id="btn-mobile-scan" type="button" class="absolute inset-0 w-full h-full mx-auto cursor-pointer bg-transparent" aria-label="Scanner le code avec la caméra du téléphone"></button>' : ''}
+          </div>
+        ` : ''}
+        <div class="transit-scan-panel__actions">
+          ${btn('Saisie manuelle', { id: idManualBtn, outline: true })}
+        </div>
+        <div id="manual-block" class="mt-2 w-full hidden">
+          <input id="scan-manual" class="border rounded-xl p-4 text-2xl w-full mb-2 focus:ring-2 focus:ring-black" placeholder="Ex.: 1074531 ou REP1515" enterkeyhint="done" autocomplete="off" />
+          <div class="text-gray-500 text-sm mb-3">Vous pouvez entrer le numéro d'inventaire ou de réparation au clavier, puis appuyer sur Enter.</div>
+          <button id="btn-manual-submit" type="button" class="px-6 py-3 rounded-xl text-xl font-semibold w-full bg-black text-white hover:opacity-90 shadow">Rechercher</button>
+        </div>
+        <input id="scan-hidden" class="opacity-0 h-0 w-0 absolute -left-[9999px]" autocomplete="off" />
+      </section>
+      <section class="transit-category-grid" aria-label="Catégories de réparations">
+        ${categoryPanels}
+      </section>
+    </div>
+  `;
+
+  setScreen(html);
+  app.dataset.screen = 'accueil';
+  document.body.classList.add('transit-home-active');
+
+  const hiddenInput = document.getElementById('scan-hidden');
+  if (hiddenInput) {
+    attachScanHandlerScan(hiddenInput);
+    if (!IS_MOBILE) {
+      hiddenInput.setAttribute('autofocus', 'autofocus');
+      focusHiddenScanner();
+      setTimeout(focusHiddenScanner, 50);
+      setTimeout(focusHiddenScanner, 300);
+      setTimeout(focusHiddenScanner, 1000);
+    }
+  }
+
+  document.querySelectorAll('[data-repair-open]').forEach((el) => {
+    el.addEventListener('click', () => openRepairFromSummaryRef(el.getAttribute('data-repair-open') || ''));
+  });
+  document.querySelectorAll('[data-category-toggle]').forEach((toggle) => {
+    toggle.addEventListener('click', () => {
+      const categoryId = toggle.getAttribute('data-category-toggle');
+      document.querySelectorAll('[data-category-toggle]').forEach((otherToggle) => {
+        const isCurrent = otherToggle === toggle && otherToggle.getAttribute('aria-expanded') !== 'true';
+        otherToggle.setAttribute('aria-expanded', String(isCurrent));
+        const body = document.querySelector(`[data-category-body="${otherToggle.getAttribute('data-category-toggle')}"]`);
+        if (body) body.hidden = !isCurrent;
+      });
+      const activeBody = document.querySelector(`[data-category-body="${categoryId}"]`);
+      if (activeBody && !activeBody.hidden) activeBody.scrollTop = 0;
+    });
+  });
+
+  const btnManual = document.getElementById(idManualBtn);
+  const manualBlock = document.getElementById('manual-block');
+  const manualInput = document.getElementById('scan-manual');
+  const btnManualSubmit = document.getElementById('btn-manual-submit');
+  const submitManual = manualInput ? attachScanHandlerManual(manualInput) : null;
+  if (btnManual && manualBlock && manualInput) {
+    btnManual.onclick = () => {
+      isManualMode = !isManualMode;
+      if (isManualMode) {
+        manualBlock.classList.remove('hidden');
+        hiddenInput?.blur();
+        manualInput.focus();
+        if (btnManualSubmit && submitManual) btnManualSubmit.onclick = submitManual;
+      } else {
+        manualBlock.classList.add('hidden');
+        manualInput.value = '';
+        focusHiddenScanner();
+      }
+    };
+  }
+
+  if (IS_MOBILE) {
+    const btnMobileScan = document.getElementById('btn-mobile-scan');
+    if (btnMobileScan) btnMobileScan.onclick = () => window.mobileStartScan
+      ? window.mobileStartScan()
+      : alert("Le mode caméra n'est pas disponible sur ce téléphone.");
+  }
+}
+
+function screenAccueilLegacyColumns_unused() {
   currentScreen = 'accueil';
   isManualMode = false;
 
@@ -3095,7 +3217,7 @@ async function loadLastFromRepairsListAndMaybeWarn() {
   try {
     const [rawItems, overview] = await Promise.all([
       apiListRepairsCache(200),
-      apiFetchOverviewHome(5),
+      apiFetchOverviewHome(200),
     ]);
 
     lastRepairsList = rawItems.map(mergeRepairCacheItem);
@@ -3113,6 +3235,9 @@ async function loadLastFromRepairsListAndMaybeWarn() {
       all: Array.from(byRef.values()),
       open: Array.isArray(overview.open) ? overview.open : [],
       done: Array.isArray(overview.done) ? overview.done : [],
+      categories: Array.isArray(overview.categories) && overview.categories.length
+        ? overview.categories
+        : buildHomeRepairsSummary(lastRepairsList).categories,
       openTotal: Number(overview.openTotal) || 0,
       doneTotal: Number(overview.doneTotal) || 0,
       error: '',

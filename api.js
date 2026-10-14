@@ -1,6 +1,6 @@
 // Timestamp: 2026-06-22 08:49:12 -04:00
 // js/api.js
-import { CONFIG } from './config.js?v=2.7.13';
+import { CONFIG } from './config.js?v=2.7.15';
 
 // Appel générique à l’API kiosque-reparation (Edge function)
 export async function api(path, opts = {}) {
@@ -90,6 +90,7 @@ export async function apiFetchOverviewHome(limit = 5) {
     doneTotal: Number(data.doneTotal) || 0,
     open: Array.isArray(data.open) ? data.open : [],
     done: Array.isArray(data.done) ? data.done : [],
+    categories: Array.isArray(data.categories) ? data.categories : [],
   };
 }
 
