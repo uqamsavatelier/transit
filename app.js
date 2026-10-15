@@ -974,6 +974,9 @@ function screenAccueil() {
   const html = `
     <div class="transit-home-shell">
       ${overviewError}
+      <section class="transit-category-grid" aria-label="Catégories de réparations">
+        ${categoryPanels}
+      </section>
       <section class="transit-scan-panel">
         <div class="transit-scan-panel__header">
           <h2 class="transit-scan-panel__title">Num&eacute;risez le code d'inventaire</h2>
@@ -993,9 +996,6 @@ function screenAccueil() {
           <button id="btn-manual-submit" type="button" class="px-6 py-3 rounded-xl text-xl font-semibold w-full bg-black text-white hover:opacity-90 shadow">Rechercher</button>
         </div>
         <input id="scan-hidden" class="opacity-0 h-0 w-0 absolute -left-[9999px]" autocomplete="off" />
-      </section>
-      <section class="transit-category-grid" aria-label="Catégories de réparations">
-        ${categoryPanels}
       </section>
     </div>
   `;
