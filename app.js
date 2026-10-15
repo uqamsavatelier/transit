@@ -745,7 +745,7 @@ function buildHomeRepairsSummary(items) {
     all: normalized,
     open: normalized.filter(isOpenRepairForAccueil).slice(0, 5),
     done: normalized.filter(isDoneRepairForAccueil).slice(0, 5),
-    categories: ETATS.map((state) => ({
+    categories: ETATS.filter((state) => [1, 5, 2, 3, 11, 9, 12, 4].includes(state.id)).map((state) => ({
       id: state.id,
       label: state.label,
       total: normalized.filter((item) => getRepairStateId(item) === state.id).length,
@@ -955,14 +955,15 @@ function screenAccueil() {
   const overviewError = homeRepairsSummary.error
     ? `<div class="transit-home-banner">${escapeHtml(homeRepairsSummary.error)}</div>`
     : '';
-  const categories = homeRepairsSummary.categories.length
-    ? homeRepairsSummary.categories
-    : buildHomeRepairsSummary(lastRepairsList).categories;
+  const fallbackCategories = buildHomeRepairsSummary(lastRepairsList).categories;
+  const categories = fallbackCategories.map((fallback) => {
+    const category = homeRepairsSummary.categories.find((entry) => Number(entry.id) === fallback.id);
+    return { ...fallback, ...category, id: fallback.id, label: fallback.label };
+  });
   const categoryPanels = categories.map((category) => `
     <section class="transit-category-panel transit-category-panel--state-${Number(category.id)}">
-      <button type="button" class="transit-category-toggle" data-category-toggle="${Number(category.id)}" aria-expanded="false">
-        <span>${escapeHtml(category.label)}</span>
-        <span class="transit-category-count">(${Number(category.total) || 0})</span>
+      <button type="button" class="transit-category-toggle" style="background-color: ${etatById(category.id)?.color.match(/#[0-9a-f]{6}/i)?.[0] || '#EBEBEB'}" data-category-toggle="${Number(category.id)}" aria-expanded="false">
+        <span>${escapeHtml(category.label)} <span class="transit-category-count">(${Number(category.total) || 0})</span></span>
       </button>
       <div class="transit-category-body" data-category-body="${Number(category.id)}" hidden>
         ${renderAccueilListItems(Array.isArray(category.items) ? category.items : [], 'Aucune réparation dans cette catégorie.')}
