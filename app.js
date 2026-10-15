@@ -815,14 +815,19 @@ function renderAccueilColumn(title, accentClass, items, emptyLabel, actionLabel,
 }
 
 async function openRepairFromSummaryRef(ref) {
-  const target = homeRepairsSummary.all.find((item) => getRepairReferenceId(item) === String(ref));
-  if (!target) {
+  const reference = String(ref || '').trim();
+  if (!reference) {
     alert("Impossible de retrouver ce dossier.");
     return;
   }
-
+  const candidates = [
+    ...homeRepairsSummary.all,
+    ...homeRepairsSummary.categories.flatMap((category) => Array.isArray(category.items) ? category.items : []),
+    ...lastRepairsList,
+  ];
+  const target = candidates.find((item) => getRepairReferenceId(item) === reference);
   const inventory = getRepairInventory(target);
-  const refId = getRepairReferenceId(target);
+  const refId = target ? getRepairReferenceId(target) : reference;
 
   showBusy(true);
   try {
