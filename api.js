@@ -259,3 +259,13 @@ function mockApi(path, opts = {}) {
 
   return Promise.resolve({ ok: true });
 }
+
+// Open the exact Podio item, independently of inventory or short repair number.
+export async function apiGetBTByItemId(itemId) {
+  const value = String(itemId ?? '').trim();
+  if (!/^[1-9][0-9]*$/.test(value)) throw new Error('item_id Podio invalide');
+  const res = await fetch(`${CONFIG.LOOKUP_BASE}/by-item-id?item_id=${encodeURIComponent(value)}`, { method: 'GET' });
+  const data = await res.json();
+  if (!res.ok || !data?.ok || !data.item) throw new Error(data?.error || 'BT introuvable');
+  return data.item;
+}

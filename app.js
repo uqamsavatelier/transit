@@ -32,7 +32,8 @@ import {
   apiListRepairsCache,
   apiListMesBT,
   apiGetBTById,
-} from './api.js?v=2.7.16';
+  apiGetBTByItemId,
+} from './api.js?v=2.7.21';
 
 console.log('[KIOSQUE] app.js chargé');
 
@@ -816,40 +817,20 @@ function renderAccueilColumn(title, accentClass, items, emptyLabel, actionLabel,
 
 async function openRepairFromSummaryRef(ref) {
   const reference = String(ref || '').trim();
-  if (!reference) {
-    alert("Impossible de retrouver ce dossier.");
-    return;
-  }
+  if (!reference) return;
   const candidates = [
     ...homeRepairsSummary.all,
     ...homeRepairsSummary.categories.flatMap((category) => Array.isArray(category.items) ? category.items : []),
     ...lastRepairsList,
   ];
   const target = candidates.find((item) => getRepairReferenceId(item) === reference);
-  const inventory = getRepairInventory(target);
-  const refId = target ? getRepairReferenceId(target) : reference;
-
+  const itemId = target?.item_id ?? target?.dto?.id ?? target?.raw_dto?.id ?? target?.id;
   showBusy(true);
   try {
-    if (inventory) {
-      await onScan(inventory, true);
-      return;
-    }
-
-    if (refId) {
-      const item = await apiGetBTById(refId);
-      const inv = getRepairInventory(item);
-      if (!inv) {
-        alert("Ce bon ne contient aucun numéro d'inventaire.");
-        return;
-      }
-      await onScan(inv, true);
-      return;
-    }
-
-    alert("Aucune référence exploitable pour ouvrir ce dossier.");
+    const item = itemId ? await apiGetBTByItemId(itemId) : await apiGetBTById(reference);
+    await openRepairItem(item);
   } catch (err) {
-    console.error('Erreur ouverture dossier résumé', err);
+    console.error('Erreur ouverture dossier', err);
     alert("Impossible d'ouvrir ce dossier pour le moment.");
   } finally {
     showBusy(false);
@@ -1349,23 +1330,7 @@ function attachScanHandlerManual(input) {
         showBusy(true);
         const item = await apiGetBTById(idUniqueParam);
 
-        const inv =
-          item.inventory ||
-          item.inventory_uqam ||
-          item.numero_inventaire ||
-          item.no_inventaire ||
-          '';
-
-        if (!inv) {
-          alert(
-            "Ce bon a été trouvé dans Podio, " +
-            "mais aucun numéro d'inventaire n'est associé. " +
-            "Impossible d'ouvrir la fiche depuis cette recherche."
-          );
-        } else {
-          // même flow que le scan de code-barres
-          await onScan(inv, true);
-        }
+        await openRepairItem(item);
       } catch (err) {
         console.error('Erreur recherche par ID unique', err);
         alert("Aucun bon de réparation trouvé.");
@@ -2020,7 +1985,7 @@ function screenTerminerDetails(item, inv) {
           majEtat(item, code);
         }
       },
-      () => onScan(inv)
+      () => openRepairItem(item)
     );
   };
 }
@@ -2649,6 +2614,20 @@ async function onScan(inv, skipWarning = false) {
     }
 
     const item   = data.latest;
+    await openRepairItem(item, inv, hectorLookup);
+
+  } catch (e) {
+    console.error(e);
+    alert('Erreur API. Voir console.');
+    gotoAccueil();
+  } finally {
+    showBusy(false);
+  }
+}
+
+async function openRepairItem(item, inv = getRepairInventory(item), hectorLookup = null) {
+  lastInventory = inv;
+  pendingAttentionWarning = null;
     showScanWarningIfNeeded(hectorLookup, item);
 
     // ➜ Dernière opération = dernier élément scanné trouvé
@@ -2724,7 +2703,7 @@ async function onScan(inv, skipWarning = false) {
       document.getElementById(idTerm).onclick =
         () => screenTerminer(
           (code) => majEtat(item, code),
-          () => onScan(inv)
+          () => openRepairItem(item)
         );
 
       document.getElementById(idBack).onclick = () => gotoAccueil();
@@ -3012,7 +2991,7 @@ async function onScan(inv, skipWarning = false) {
                   majEtat(item, code);
                 }
               },
-              () => onScan(inv)
+              () => openRepairItem(item)
             );
         }
 
@@ -3022,13 +3001,6 @@ async function onScan(inv, skipWarning = false) {
 
     }
 
-  } catch (e) {
-    console.error(e);
-    alert('Erreur API. Voir console.');
-    gotoAccueil();
-  } finally {
-    showBusy(false);
-  }
 }
 
 async function majEtat(item, state) {
